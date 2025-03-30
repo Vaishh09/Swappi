@@ -1,20 +1,14 @@
-//
-//  FrontPage.swift
-//  Swappi
-//
-//  Created by Asmi Kachare on 3/29/25.
-//
-
 import SwiftUI
 
 struct FrontPage: View {
     var body: some View {
         NavigationView {
             ZStack {
+                
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        Color(red: 1.0, green: 0.65, blue: 0.9),
-                        Color(red: 0.55, green: 0.85, blue: 1.0)
+                        Color(red: 0.92, green: 0.87, blue: 0.99),
+                        Color(red: 0.85, green: 0.80, blue: 0.95)
                     ]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -30,33 +24,35 @@ struct FrontPage: View {
                     Text("Welcome to Swappi!")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(red: 0.25, green: 0.25, blue: 0.35))
 
                     VStack(spacing: 16) {
                         NavigationLink(destination: LoginPage()) {
                             Text("Sign In")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color(red: 0.25, green: 0.25, blue: 0.35))
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(Color.blue)
-                                .cornerRadius(10)
+                                .background(Color(red: 0.75, green: 0.87, blue: 0.95))
+                                .cornerRadius(15)
+                                .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
                         }
                         
                         NavigationLink(destination: CreateAccPage()) {
                             Text("Create Account")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color(red: 0.25, green: 0.25, blue: 0.35))
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(Color.green)
-                                .cornerRadius(10)
+                                .background(Color(red: 0.75, green: 0.87, blue: 0.95))
+                                .cornerRadius(15)
+                                .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
                         }
                     }
                     .padding(.horizontal, 40)
                 }
             }
-            .navigationBarHidden(true) 
+            .navigationBarHidden(true)
         }
     }
 }

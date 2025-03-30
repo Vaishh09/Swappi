@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  Swappi
-//
-//  Created by Vaishnavi Mahajan on 3/29/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {

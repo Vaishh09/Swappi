@@ -1,11 +1,3 @@
-//
-//  FloatingNavBar.swift
-//  Swappi
-//
-//  Created by Vaishnavi Mahajan on 3/29/25.
-//
-
-
 import SwiftUI
 
 struct FloatingNavBar: View {
@@ -14,23 +6,17 @@ struct FloatingNavBar: View {
     var body: some View {
         HStack {
             Spacer()
-            Image(systemName: "magnifyingglass")
-                .onTapGesture { selectedTab = .search }
+            navIcon("magnifyingglass", tab: .search)
             Spacer()
-            Image(systemName: "message")
-                .onTapGesture { selectedTab = .messages }
+            navIcon("message", tab: .messages)
             Spacer()
-            Image(systemName: "house")
-                .onTapGesture { selectedTab = .home }
+            navIcon("house", tab: .home)
             Spacer()
-            Image(systemName: "bookmark")
-                .onTapGesture { selectedTab = .saved }
+            navIcon("bookmark", tab: .saved)
             Spacer()
-            Image(systemName: "gear")
-                .onTapGesture { selectedTab = .settings }
+            navIcon("gear", tab: .settings)
             Spacer()
-            Image(systemName: "person.crop.circle")
-                .onTapGesture { selectedTab = .profile }
+            navIcon("person.crop.circle", tab: .profile)
             Spacer()
         }
         .padding()
@@ -39,5 +25,19 @@ struct FloatingNavBar: View {
         .shadow(radius: 5)
         .padding(.horizontal, 20)
         .padding(.bottom, 10)
+    }
+
+    
+    private func navIcon(_ systemName: String, tab: Tab) -> some View {
+        
+        let selectedColor = Color(red: 0.65, green: 0.75, blue: 1.0)
+        let unselectedColor = Color(red: 0.7, green: 0.7, blue: 0.7).opacity(0.6)
+
+        return Image(systemName: systemName)
+            .font(.system(size: 20, weight: .medium))
+            .foregroundColor(selectedTab == tab ? selectedColor : unselectedColor)
+            .onTapGesture {
+                selectedTab = tab
+            }
     }
 }

@@ -1,19 +1,14 @@
-//
-//  SettingsPage.swift
-//  Swappi
-//
-//  Created by Asmi Kachare on 3/29/25.
-//
-
 import SwiftUI
+import FirebaseAuth
 
 struct SettingsPage: View {
+    @AppStorage("isLoggedIn") var isLoggedIn = false
     @State private var notificationsEnabled = true
-    @State private var darkMode = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
+                
                 HStack {
                     Spacer()
                     Text("Settings")
@@ -24,14 +19,12 @@ struct SettingsPage: View {
 
                 ScrollView {
                     VStack(spacing: 20) {
-                        SettingsRow(title: "Edit Profile", icon: "person.crop.circle") {
-                        }
-
+                        
                         ToggleRow(title: "Push Notifications", icon: "bell.fill", isOn: $notificationsEnabled)
 
-                        ToggleRow(title: "Dark Mode", icon: "moon.fill", isOn: $darkMode)
-
+                        
                         SettingsRow(title: "Log Out", icon: "arrow.backward.circle.fill", isDestructive: true) {
+                            logOut()
                         }
                     }
                     .padding(.horizontal)
@@ -41,6 +34,16 @@ struct SettingsPage: View {
             }
         }
         .background(Color(red: 0.98, green: 0.98, blue: 1.0).ignoresSafeArea())
+    }
+
+    private func logOut() {
+        do {
+            try Auth.auth().signOut()
+            
+            isLoggedIn = false
+        } catch {
+            print("❌ Failed to log out: \(error.localizedDescription)")
+        }
     }
 }
 
@@ -99,9 +102,4 @@ struct ToggleRow: View {
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
-}
-
-#Preview
-{
-    SettingsPage();
 }

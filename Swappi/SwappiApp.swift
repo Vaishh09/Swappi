@@ -1,10 +1,3 @@
-//
-//  SwappiApp.swift
-//  Swappi
-//
-//  Created by Vaishnavi Mahajan on 3/29/25.
-//
-
 import SwiftUI
 import FirebaseCore
 import FirebaseAuth
@@ -20,7 +13,6 @@ struct SwappiApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-//            FrontPage()
         }
     }
 }

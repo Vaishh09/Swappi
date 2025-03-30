@@ -1,353 +1,104 @@
-//
-//  AboutYouPage.swift
-//  Swappi
-//
-//  Created by Asmi Kachare on 3/29/25.
-//
-
 import SwiftUI
 import PhotosUI
 import AVFoundation
 import FirebaseAuth
+import UniformTypeIdentifiers
 
-struct AboutYouPage: View {
-    @Environment(\.presentationMode) var presentationMode
-    @AppStorage("isLoggedIn") var isLoggedIn = false  // Will be set after full profile save
+struct PastelColors {
     
-    // Media and profile data
-    @State private var images: [UIImage] = []
-    @State private var videoURL: URL?
-    @State private var audioURL: URL?
+    static let cream = Color(red: 0.98, green: 0.96, blue: 0.90)
+    static let lightBlue = Color(red: 0.75, green: 0.87, blue: 0.95)
+    static let lightGreen = Color(red: 0.80, green: 0.95, blue: 0.82)
+    static let paleYellow = Color(red: 0.98, green: 0.96, blue: 0.80)
     
-    // Skills and Interests
-    @State private var selectedSkills: [String] = []
-    @State private var newSkill: String = ""
-    @State private var selectedInterests: [String] = []
-    @State private var newInterest: String = ""
     
-    // Mood and vibe details
-    @State private var moodEmoji = ""
-    @State private var vibeNote = ""
+    static let gradientTop = cream
+    static let gradientBottom = Color(red: 0.95, green: 0.93, blue: 0.87)
     
-    // Controls for pickers / sheets
-    @State private var isShowingImageSourceSheet = false
-    @State private var isShowingVideoPickerSheet = false
-    @State private var isShowingCamera = false
-    @State private var isShowingPhotoLibrary = false
-    @State private var isShowingVideoPicker = false
-    @State private var isShowingAudioRecorder = false
-    @State private var selectedPhotoIndex: Int? = nil
-    @State private var mediaSelection: MediaType = .video
-    @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
+    
+    static let primaryButton = lightBlue
+    static let secondaryButton = lightGreen
+    static let deleteButton = Color(red: 0.96, green: 0.85, blue: 0.82)
+    static let saveButton = Color(red: 0.70, green: 0.90, blue: 0.75)
+    
+    
+    static let darkText = Color(red: 0.25, green: 0.25, blue: 0.35)
+}
 
-    // Loading and error states
-    @State private var isSavingProfile = false
-    @State private var saveError: String? = nil
-
-    @StateObject var profileVM = ProfileViewModel()  // Ensure your view model is set up correctly
-
-    enum MediaType: String, CaseIterable {
-        case video = "Video"
-        case audio = "Audio"
-    }
-
-        var body: some View {
-            NavigationStack {
-                ZStack {
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(red: 1.0, green: 0.65, blue: 0.9),
-                            Color(red: 0.55, green: 0.85, blue: 1.0)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .ignoresSafeArea()
-
-                    ScrollView(.vertical, showsIndicators: true) {
-                        VStack(spacing: 20) {
-                        // Top bar with back button
-                            HStack {
-                                Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.title)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    }
-                                    Spacer()
-                                }
-                            .padding(.top, 10)
-
-                            Image("Swappi")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100, height: 100)
-
-                            Text("Tell us about you!")
-                                .font(.title)
-                                .foregroundColor(.white)
-                                .padding(.top, 5)
-                            
-                            // Use the extracted photo section view:
-                            PhotoSectionView(images: $images, isShowingImageSourceSheet: $isShowingImageSourceSheet)
-                        
-                            // Video/Audio section
-                            VideoAudioSection(
-                                mediaSelection: $mediaSelection,
-                                videoURL: $videoURL,
-                                audioURL: $audioURL,
-                                isShowingVideoPickerSheet: $isShowingVideoPickerSheet,
-                                isShowingAudioRecorder: $isShowingAudioRecorder
-                            )
-                            
-                            // Skills section
-                            DynamicInputSection(
-                                title: "Add at least 5 Skills",
-                                items: $selectedSkills,
-                                newItem: $newSkill,
-                                onAdd: addSkill
-                            )
-                            
-                            // Interests section
-                            DynamicInputSection(
-                                title: "Add at least 5 Interests",
-                                items: $selectedInterests,
-                                newItem: $newInterest,
-                                onAdd: addInterest
-                            )
-                            
-                            // Mood & Vibe
-                            MoodVibeSection(moodEmoji: $moodEmoji, vibeNote: $vibeNote)
-                            
-                            // In your AboutYouPage body, replace the old save button code with:
-                            SaveProfileSection(
-                                isSaving: $isSavingProfile,
-                                error: $saveError,
-                                action: saveProfile
-                            )
-                    }
-                }
-            }
-        }
-        .navigationBarHidden(true)
-        // Image Source Sheet for photos
-        .actionSheet(isPresented: $isShowingImageSourceSheet) {
-            ActionSheet(
-                title: Text("Select Photo"),
-                message: Text("Choose your photo source"),
-                buttons: [
-                    .default(Text("Take Photo")) {
-                        sourceType = .camera
-                        isShowingCamera = true
-                    },
-                    .default(Text("Choose from Library")) {
-                        sourceType = .photoLibrary
-                        isShowingPhotoLibrary = true
-                    },
-                    .cancel()
-                ]
-            )
-        }
-        // Video Picker Sheet
-        .actionSheet(isPresented: $isShowingVideoPickerSheet) {
-            ActionSheet(
-                title: Text("Select Video"),
-                message: Text("Choose your video source"),
-                buttons: [
-                    .default(Text("Record Video")) {
-                        isShowingVideoPicker = true
-                        sourceType = .camera
-                    },
-                    .default(Text("Choose from Library")) {
-                        isShowingVideoPicker = true
-                        sourceType = .photoLibrary
-                    },
-                    .cancel()
-                ]
-            )
-        }
-        // Present Camera for image picking
-        .sheet(isPresented: $isShowingCamera) {
-            ImagePicker(selectedImage: { image in
-                addOrUpdateImage(image)
-            }, sourceType: .camera)
-        }
-        // Present Photo Library for multiple images (iOS 14+)
-        .sheet(isPresented: $isShowingPhotoLibrary) {
-            if #available(iOS 14, *) {
-                MultipleImagePicker(onImagesSelected: { selectedImages in
-                    addMultipleImages(selectedImages)
-                })
-            } else {
-                ImagePicker(selectedImage: { image in
-                    addOrUpdateImage(image)
-                }, sourceType: .photoLibrary)
-            }
-        }
-        // Present Video Picker
-        .sheet(isPresented: $isShowingVideoPicker) {
-            VideoPicker(sourceType: sourceType) { url in
-                self.videoURL = url
-            }
-        }
-        // Present Audio Recorder
-        .sheet(isPresented: $isShowingAudioRecorder) {
-            AudioRecorderView { url in
-                self.audioURL = url
-            }
-        }
-    }
+struct PastelTextField: ViewModifier {
+    var backgroundColor: Color
     
-    // Add this method in your AboutYouPage struct
-    private func saveProfile() {
-        // Your existing validation and save logic here
-        guard !selectedSkills.isEmpty,
-              !selectedInterests.isEmpty,
-              (videoURL != nil || audioURL != nil) else {
-            saveError = "Please complete all required fields."
-            return
-        }
-        
-        isSavingProfile = true
-        
-        let profile = UserProfile(
-            name: "Zoya Debug",
-            email: "zoya@debug.com",
-            vibe: "Matcha",
-            mood: "😊",
-            skillsKnown: ["Swift", "UI"],
-            skillsWanted: ["Firebase"],
-            profilePhotos: [],
-            introMediaURL: "",
-            note: "Test User",
-            uid: UUID().uuidString
-        )
-        
-        profileVM.saveUserProfile(profile: profile) { result in
-            isSavingProfile = false
-            switch result {
-            case .success():
-                isLoggedIn = true
-            case .failure(let error):
-                saveError = error.localizedDescription
-            }
-        }
-    }
-    
-    // MARK: - Image Handling Functions
-    private func addOrUpdateImage(_ image: UIImage) {
-        if let index = selectedPhotoIndex {
-            if index < images.count {
-                images[index] = image
-            } else {
-                images.append(image)
-            }
-            selectedPhotoIndex = nil
-        }
-    }
-    
-    private func addMultipleImages(_ newImages: [UIImage]) {
-        if let index = selectedPhotoIndex, index < images.count {
-            if !newImages.isEmpty {
-                images[index] = newImages[0]
-                let remainingImages = Array(newImages.dropFirst())
-                addRemainingImages(remainingImages)
-            }
-        } else {
-            addRemainingImages(newImages)
-        }
-        selectedPhotoIndex = nil
-    }
-    
-    private func addRemainingImages(_ newImages: [UIImage]) {
-        for image in newImages {
-            if images.count < 6 {
-                images.append(image)
-            } else {
-                break
-            }
-        }
-    }
-    
-    // MARK: - Skill and Interest Functions
-    private func addSkill() {
-        guard !newSkill.isEmpty else { return }
-        selectedSkills.append(newSkill)
-        newSkill = ""
-    }
-    
-    private func addInterest() {
-        guard !newInterest.isEmpty else { return }
-        selectedInterests.append(newInterest)
-        newInterest = ""
+    func body(content: Content) -> some View {
+        content
+            .padding()
+            .background(backgroundColor)
+            .cornerRadius(15)
+            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+            .padding(.vertical, 5)
     }
 }
 
-struct VideoAudioSection: View {
-    @Binding var mediaSelection: AboutYouPage.MediaType
-    @Binding var videoURL: URL?
-    @Binding var audioURL: URL?
-    @Binding var isShowingVideoPickerSheet: Bool
-    @Binding var isShowingAudioRecorder: Bool
+struct PastelButton: ButtonStyle {
+    var backgroundColor: Color
+    var textColor: Color = .white
     
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(backgroundColor)
+            .cornerRadius(15)
+            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .foregroundColor(textColor)
+            .animation(.spring(), value: configuration.isPressed)
+    }
+}
+
+struct PastelBubbleTag: View {
+    let text: String
+    var backgroundColor: Color = PastelColors.lightBlue
+    var onDelete: (() -> Void)? = nil
+
     var body: some View {
-        VStack(alignment: .leading) {
-            Text("Add Video or Audio (Required)")
-                .font(.headline)
+        HStack(spacing: 6) {
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
-                .padding(.horizontal, 40)
+                .lineLimit(1)
             
-            HStack(spacing: 0) {
-                ForEach(AboutYouPage.MediaType.allCases, id: \.self) { type in
-                    Button(action: { mediaSelection = type }) {
-                        Text(type.rawValue)
-                            .fontWeight(.medium)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(mediaSelection == type ? Color.white.opacity(0.6) : Color.gray.opacity(0.3))
-                            .foregroundColor(mediaSelection == type ? .black : .white)
-                    }
+            if let onDelete = onDelete {
+                Button(action: onDelete) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
                 }
-            }
-            .background(Color.gray.opacity(0.3))
-            .cornerRadius(25)
-            .padding(.horizontal, 40)
-            
-            Button(action: {
-                if mediaSelection == .video {
-                    isShowingVideoPickerSheet = true
-                } else {
-                    isShowingAudioRecorder = true
-                }
-            }) {
-                HStack {
-                    Image(systemName: mediaSelection == .video ? "video.fill" : "mic.fill")
-                    Text(mediaSelection == .video ? "Upload Video" : "Record Audio")
-                }
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.blue)
-                .cornerRadius(10)
-            }
-            .padding(.horizontal, 40)
-            .padding(.top, 15)
-            
-            if mediaSelection == .video, let videoURL = videoURL {
-                VideoPreviewView(url: videoURL)
-                    .frame(height: 150)
-                    .cornerRadius(12)
-                    .padding(.horizontal, 40)
-                    .padding(.top, 10)
-            } else if mediaSelection == .audio, let audioURL = audioURL {
-                AudioPreviewView(url: audioURL)
-                    .frame(height: 80)
-                    .cornerRadius(12)
-                    .padding(.horizontal, 40)
-                    .padding(.top, 10)
+                .buttonStyle(PlainButtonStyle())
             }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(backgroundColor)
+        .clipShape(Capsule())
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+}
+
+struct MoodVibeSection: View {
+    @Binding var moodEmoji: String
+    @Binding var vibeNote: String
+    
+    var body: some View {
+        VStack(spacing: 15) {
+            TextField("Tell us your mood in an emoji", text: $moodEmoji)
+                .modifier(PastelTextField(backgroundColor: PastelColors.cream))
+                .foregroundColor(PastelColors.darkText)
+            
+            TextField("Describe your vibe today in three or more words", text: $vibeNote)
+                .modifier(PastelTextField(backgroundColor: PastelColors.cream))
+                .foregroundColor(PastelColors.darkText)
+        }
+        .padding(.horizontal)
     }
 }
 
@@ -357,56 +108,52 @@ struct DynamicInputSection: View {
     @Binding var newItem: String
     var onAdd: () -> Void
     
+    
+    private func colorForIndex(_ index: Int) -> Color {
+        let colors = [PastelColors.lightBlue, PastelColors.lightGreen]
+        return colors[index % colors.count]
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(PastelColors.darkText)
             
             HStack {
                 TextField("Enter \(title.lowercased())", text: $newItem)
-                    .padding()
-                    .background(Color.white.opacity(0.8))
-                    .cornerRadius(10)
+                    .modifier(PastelTextField(backgroundColor: PastelColors.cream))
+                    .foregroundColor(PastelColors.darkText)
+                    .disabled(items.count >= 5)
                 
-                Button(action: onAdd) {
+                
+                Button(action: {
+                    if items.count < 5 {
+                        onAdd()
+                    }
+                }) {
                     Text("Add")
                         .foregroundColor(.white)
                         .padding(.horizontal)
                         .padding(.vertical, 8)
-                        .background(Color.green)
+                        .background(items.count < 5 ? PastelColors.lightGreen : Color.gray)
                         .cornerRadius(8)
                 }
             }
             
-            FlowLayout(data: items, spacing: 8) { item in
-                BubbleTag(text: item) {
-                    if let idx = items.firstIndex(of: item) {
-                        items.remove(at: idx)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(items.prefix(5).enumerated()), id: \.element) { index, item in
+                        PastelBubbleTag(text: item, backgroundColor: colorForIndex(index)) {
+                            if let idx = items.firstIndex(of: item) {
+                                items.remove(at: idx)
+                            }
+                        }
                     }
                 }
+                .padding(.vertical, 4)
             }
-            .padding(.top, 8)
-        }
-        .padding(.horizontal)
-    }
-}
-
-struct MoodVibeSection: View {
-    @Binding var moodEmoji: String
-    @Binding var vibeNote: String
-    
-    var body: some View {
-        VStack(spacing: 10) {
-            TextField("Pick a mood emoji", text: $moodEmoji)
-                .padding()
-                .background(Color.white.opacity(0.8))
-                .cornerRadius(10)
-            
-            TextField("Vibe? (Add a note)", text: $vibeNote)
-                .padding()
-                .background(Color.white.opacity(0.8))
-                .cornerRadius(10)
+            .animation(.spring(), value: items)
         }
         .padding(.horizontal)
     }
@@ -421,11 +168,15 @@ struct SaveProfileSection: View {
         Group {
             if isSaving {
                 ProgressView("Saving Profile...")
+                    .foregroundColor(PastelColors.darkText)
+                    .padding(.bottom, 5)
             }
             if let error = error {
                 Text("❌ \(error)")
-                    .foregroundColor(.red)
+                    .foregroundColor(PastelColors.deleteButton)
+                    .padding(.vertical, 5)
             }
+            
             
             Button(action: action) {
                 Text("Save Profile")
@@ -433,40 +184,235 @@ struct SaveProfileSection: View {
                     .foregroundColor(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.green)
+                    .background(PastelColors.saveButton)
                     .cornerRadius(10)
             }
         }
         .padding(.horizontal)
+        .padding(.bottom, 20)
     }
 }
+
+
+struct VideoAudioSection: View {
+    @Binding var mediaSelection: AboutYouPage.MediaType
+    @Binding var videoURL: URL?
+    @Binding var audioURL: URL?
+    @Binding var isShowingVideoPickerSheet: Bool
+    @Binding var isShowingAudioRecorder: Bool
+    @Binding var videoSourceType: UIImagePickerController.SourceType
+    
+    init(mediaSelection: Binding<AboutYouPage.MediaType>,
+         videoURL: Binding<URL?>,
+         audioURL: Binding<URL?>,
+         isShowingVideoPickerSheet: Binding<Bool>,
+         isShowingAudioRecorder: Binding<Bool>,
+         videoSourceType: Binding<UIImagePickerController.SourceType>) {
+        
+        self._mediaSelection = mediaSelection
+        self._videoURL = videoURL
+        self._audioURL = audioURL
+        self._isShowingVideoPickerSheet = isShowingVideoPickerSheet
+        self._isShowingAudioRecorder = isShowingAudioRecorder
+        self._videoSourceType = videoSourceType
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Add Video or Audio (Required)")
+                .font(.headline)
+                .foregroundColor(PastelColors.darkText)
+                .padding(.horizontal, 20)
+            
+            
+            HStack(spacing: 0) {
+                ForEach(AboutYouPage.MediaType.allCases, id: \.self) { type in
+                    Button(action: { mediaSelection = type }) {
+                        Text(type.rawValue)
+                            .fontWeight(.medium)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                mediaSelection == type
+                                ? (type == .video ? PastelColors.lightBlue : PastelColors.lightGreen)
+                                : PastelColors.cream.opacity(0.8)
+                            )
+                            .foregroundColor(mediaSelection == type ? PastelColors.darkText : Color.gray)
+                    }
+                }
+            }
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            
+            
+            Button(action: {
+                if mediaSelection == .video {
+                    isShowingVideoPickerSheet = true
+                } else {
+                    isShowingAudioRecorder = true
+                }
+            }) {
+                HStack {
+                    Image(systemName: mediaSelection == .video ? "video.fill" : "mic.fill")
+                    Text(mediaSelection == .video ? "Upload Video" : "Record Audio")
+                }
+                .fontWeight(.semibold)
+                .foregroundColor(PastelColors.darkText)
+            }
+            .buttonStyle(PastelButton(backgroundColor: mediaSelection == .video ? PastelColors.lightBlue : PastelColors.lightGreen))
+            .padding(.horizontal, 20)
+            .padding(.top, 15)
+            
+            if mediaSelection == .video, let videoURL = videoURL {
+                VideoPreviewView(url: videoURL)
+                    .frame(height: 150)
+                    .cornerRadius(15)
+                    .overlay(RoundedRectangle(cornerRadius: 15).stroke(PastelColors.lightBlue, lineWidth: 2))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+            } else if mediaSelection == .audio, let audioURL = audioURL {
+                AudioPreviewView(url: audioURL)
+                    .frame(height: 80)
+                    .cornerRadius(15)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+            }
+        }
+    }
+}
+
+struct AudioPreviewView: View {
+    let url: URL
+    @State private var audioPlayer: AVAudioPlayer?
+    @State private var isPlaying = false
+    @State private var currentTime: TimeInterval = 0
+    @State private var totalDuration: TimeInterval = 0
+    @State private var timer: Timer?
+
+    var body: some View {
+        VStack {
+            HStack(spacing: 20) {
+                Button(action: {
+                    isPlaying ? pauseAudio() : playAudio()
+                }) {
+                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(PastelColors.darkText)
+                }
+                VStack(alignment: .leading) {
+                    Text("Your Audio Recording")
+                        .foregroundColor(PastelColors.darkText)
+                        .font(.headline)
+                    Text("\(timeString(time: currentTime)) / \(timeString(time: totalDuration))")
+                        .foregroundColor(PastelColors.darkText.opacity(0.8))
+                        .font(.subheadline)
+                }
+                Spacer()
+            }
+            .padding()
+            .background(LinearGradient(
+                gradient: Gradient(colors: [PastelColors.lightBlue, PastelColors.lightGreen]),
+                startPoint: .leading,
+                endPoint: .trailing
+            ))
+            .cornerRadius(15)
+            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+        }
+        .onAppear { setupAudioPlayer() }
+        .onDisappear {
+            audioPlayer?.stop()
+            timer?.invalidate()
+        }
+    }
+
+    
+    private func setupAudioPlayer() {
+            do {
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.prepareToPlay()
+                totalDuration = audioPlayer?.duration ?? 0
+            } catch {
+                print("Error setting up audio player: \(error.localizedDescription)")
+            }
+        }
+
+        private func playAudio() {
+            audioPlayer?.play()
+            isPlaying = true
+            timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+                currentTime = audioPlayer?.currentTime ?? 0
+                if currentTime >= totalDuration {
+                    pauseAudio()
+                    currentTime = 0
+                }
+            }
+        }
+
+        private func pauseAudio() {
+            audioPlayer?.pause()
+            isPlaying = false
+            timer?.invalidate()
+        }
+
+        private func timeString(time: TimeInterval) -> String {
+            let minutes = Int(time) / 60
+            let seconds = Int(time) % 60
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
+    }
+
 
 struct PhotoSectionView: View {
     @Binding var images: [UIImage]
     @Binding var isShowingImageSourceSheet: Bool
+    @Binding var selectedImageIndex: Int?
     let maxPhotos: Int = 6
+    
+    var onSelectSourceType: ((UIImagePickerController.SourceType) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
                 Text("Add 3–6 Photos")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(PastelColors.darkText)
                 Spacer()
-                Button(action: { isShowingImageSourceSheet = true }) {
+                
+                Menu {
+                    Button(action: {
+                        onSelectSourceType?(.camera)
+                    }) {
+                        Label("Take Photo", systemImage: "camera")
+                    }
+                    
+                    Button(action: {
+                        onSelectSourceType?(.photoLibrary)
+                    }) {
+                        Label("Choose from Library", systemImage: "photo.on.rectangle")
+                    }
+                } label: {
                     Text("Upload")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.blue)
-                        .cornerRadius(8)
+                        .foregroundColor(PastelColors.darkText)
+                        .padding(.horizontal, 15)
+                        .padding(.vertical, 8)
+                        .background(PastelColors.lightBlue)
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
                 }
             }
             .padding(.horizontal)
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
+                spacing: 12
+            ) {
                 ForEach(0..<maxPhotos, id: \.self) { index in
                     ZStack {
                         if index < images.count {
@@ -475,44 +421,556 @@ struct PhotoSectionView: View {
                                 .scaledToFill()
                                 .frame(width: 100, height: 100)
                                 .clipped()
-                                .cornerRadius(12)
+                                .cornerRadius(15)
                                 .overlay(
-                                    Button(action: {
-                                        // Action to edit the image at this index
-                                    }) {
-                                        Image(systemName: "pencil.circle.fill")
-                                            .font(.title)
-                                            .foregroundColor(.white)
-                                            .shadow(radius: 3)
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .stroke(Color.white, lineWidth: 3)
+                                        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
+                                )
+                                .overlay(
+                                    Menu {
+                                        Button(action: {
+                                            selectedImageIndex = index
+                                            onSelectSourceType?(.camera)
+                                        }) {
+                                            Label("Take Photo", systemImage: "camera")
+                                        }
+                                        
+                                        Button(action: {
+                                            selectedImageIndex = index
+                                            onSelectSourceType?(.photoLibrary)
+                                        }) {
+                                            Label("Choose from Library", systemImage: "photo.on.rectangle")
+                                        }
+                                    } label: {
+                                        ZStack {
+                                            Circle()
+                                                .fill(PastelColors.lightBlue)
+                                                .frame(width: 32, height: 32)
+                                                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                                            
+                                            Image(systemName: "pencil")
+                                                .font(.system(size: 15, weight: .bold))
+                                                .foregroundColor(.white)
+                                        }
                                     }
                                     .padding(8),
                                     alignment: .topTrailing
                                 )
-                        } else {
-                            Button(action: {
-                                isShowingImageSourceSheet = true
-                            }) {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5]))
-                                    .frame(width: 100, height: 100)
-                                    .overlay(
-                                        VStack(spacing: 8) {
-                                            Image(systemName: "plus")
-                                                .font(.title2)
-                                                .foregroundColor(.white)
-                                            Text("Add")
-                                                .font(.caption)
+                                .overlay(
+                                    Button(action: {
+                                        if images.count > 0 && index < images.count {
+                                            images.remove(at: index)
+                                        }
+                                    }) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(PastelColors.deleteButton)
+                                                .frame(width: 28, height: 28)
+                                                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                                            
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 12, weight: .bold))
                                                 .foregroundColor(.white)
                                         }
-                                    )
-                                    .background(Color.black.opacity(0.1))
-                                    .cornerRadius(12)
+                                    }
+                                    .padding(8),
+                                    alignment: .bottomTrailing
+                                )
+                                .animation(.spring(), value: images.count)
+                        } else {
+                            Menu {
+                                Button(action: {
+                                    selectedImageIndex = index
+                                    onSelectSourceType?(.camera)
+                                }) {
+                                    Label("Take Photo", systemImage: "camera")
+                                }
+                                
+                                Button(action: {
+                                    selectedImageIndex = index
+                                    onSelectSourceType?(.photoLibrary)
+                                }) {
+                                    Label("Choose from Library", systemImage: "photo.on.rectangle")
+                                }
+                            } label: {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .fill(PastelColors.cream)
+                                        .frame(width: 100, height: 100)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 15)
+                                                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5]))
+                                                .foregroundColor(index % 2 == 0 ? PastelColors.lightBlue : PastelColors.lightGreen)
+                                        )
+                                    
+                                    VStack(spacing: 8) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(index % 2 == 0 ? PastelColors.lightBlue.opacity(0.8) : PastelColors.lightGreen.opacity(0.8))
+                                                .frame(width: 40, height: 40)
+                                            
+                                            Image(systemName: "plus")
+                                                .font(.system(size: 20, weight: .bold))
+                                                .foregroundColor(.white)
+                                        }
+                                        
+                                        Text("Add")
+                                            .font(.caption)
+                                            .foregroundColor(PastelColors.darkText)
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
             .padding(.horizontal)
+            
+            if images.count > 0 {
+                HStack {
+                    Text("\(images.count)/\(maxPhotos) photos added")
+                        .font(.caption)
+                        .foregroundColor(PastelColors.darkText)
+                    
+                    Spacer()
+                    
+                    
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 5)
+                            .frame(width: 120, height: 8)
+                            .foregroundColor(Color.gray.opacity(0.2))
+                        
+                        RoundedRectangle(cornerRadius: 5)
+                            .frame(width: 120 * CGFloat(images.count) / CGFloat(maxPhotos), height: 8)
+                            .foregroundColor(images.count % 2 == 0 ? PastelColors.lightBlue : PastelColors.lightGreen)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 5)
+            }
+        }
+    }
+}
+
+
+
+struct AboutYouPage: View {
+    @Environment(\.presentationMode) var presentationMode
+    @AppStorage("isLoggedIn") var isLoggedIn = false
+    
+    @State private var images: [UIImage] = []
+    @State private var videoURL: URL?
+    @State private var audioURL: URL?
+    @State private var selectedImageIndex: Int? = nil
+    
+    @State private var selectedSkills: [String] = []
+    @State private var newSkill: String = ""
+    @State private var selectedInterests: [String] = []
+    @State private var newInterest: String = ""
+    
+    @State private var moodEmoji = ""
+    @State private var vibeNote = ""
+    
+    @State private var isShowingImageSourceSheet = false
+    @State private var isShowingPhotoPicker = false
+    @State private var photoSourceType: UIImagePickerController.SourceType = .photoLibrary
+    @State private var isShowingDocumentPicker = false
+    
+    @State private var isShowingVideoPickerSheet = false
+    @State private var isShowingVideoPicker = false
+    @State private var videoSourceType: UIImagePickerController.SourceType = .photoLibrary
+    
+    @State private var isShowingAudioRecorder = false
+    
+    @State private var isSavingProfile = false
+    @State private var saveError: String? = nil
+    
+    enum MediaType: String, CaseIterable {
+        case video = "Video"
+        case audio = "Audio"
+    }
+    @State private var mediaSelection: MediaType = .video
+    
+    @StateObject var profileVM = ProfileViewModel()
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        PastelColors.gradientTop,
+                        PastelColors.gradientBottom
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 20) {
+                        
+                        
+                        Image("Swappi")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 100, height: 100)
+                            .padding(.top, 20)
+
+                        Text("Tell us about you!")
+                            .font(.title)
+                            .foregroundColor(PastelColors.darkText)
+                            .padding(.top, 5)
+                        
+                        PhotoSectionView(
+                            images: $images,
+                            isShowingImageSourceSheet: $isShowingImageSourceSheet,
+                            selectedImageIndex: $selectedImageIndex,
+                            onSelectSourceType: { sourceType in
+                                showImagePicker(sourceType: sourceType)
+                            }
+                        )
+                        
+                        VideoAudioSection(
+                            mediaSelection: $mediaSelection,
+                            videoURL: $videoURL,
+                            audioURL: $audioURL,
+                            isShowingVideoPickerSheet: $isShowingVideoPickerSheet,
+                            isShowingAudioRecorder: $isShowingAudioRecorder,
+                            videoSourceType: $videoSourceType
+                        )
+                        
+                        DynamicInputSection(
+                            title: "Add at least 5 Skills",
+                            items: $selectedSkills,
+                            newItem: $newSkill,
+                            onAdd: addSkill
+                        )
+                        
+                        DynamicInputSection(
+                            title: "Add at least 5 Interests",
+                            items: $selectedInterests,
+                            newItem: $newInterest,
+                            onAdd: addInterest
+                        )
+                        
+                        MoodVibeSection(
+                            moodEmoji: $moodEmoji,
+                            vibeNote: $vibeNote
+                        )
+                        
+                        SaveProfileSection(
+                            isSaving: $isSavingProfile,
+                            error: $saveError,
+                            action: saveProfile
+                        )
+                    }
+                }
+            }
+        }
+        .navigationBarHidden(true)
+        
+        .actionSheet(isPresented: $isShowingImageSourceSheet) {
+            ActionSheet(
+                title: Text("Select Photo"),
+                message: Text("Choose your photo source"),
+                buttons: [
+                    .default(Text("Take Photo")) {
+                        photoSourceType = .camera
+                        isShowingPhotoPicker = true
+                    },
+                    .default(Text("Choose from Library")) {
+                        photoSourceType = .photoLibrary
+                        isShowingPhotoPicker = true
+                    },
+                    .default(Text("Choose from Files")) {
+                        isShowingDocumentPicker = true
+                    },
+                    .cancel()
+                ]
+            )
+        }
+        
+        .sheet(isPresented: $isShowingPhotoPicker) {
+            print("Photo picker was dismissed")
+        } content: {
+            ImagePicker(selectedImage: { image in
+                print("Image selected, size: \(image.size)")
+                addImage(image)
+            }, sourceType: photoSourceType)
+        }
+        
+        .sheet(isPresented: $isShowingDocumentPicker) {
+            print("Document picker was dismissed")
+        } content: {
+            DocumentPicker { pickedURL in
+                print("Document picked: \(pickedURL)")
+                if let data = try? Data(contentsOf: pickedURL),
+                   let image = UIImage(data: data) {
+                    addImage(image)
+                }
+            }
+        }
+        
+        .actionSheet(isPresented: $isShowingVideoPickerSheet) {
+            ActionSheet(
+                title: Text("Select Video"),
+                message: Text("Choose your video source"),
+                buttons: [
+                    .default(Text("Record Video")) {
+                        videoSourceType = .camera
+                        isShowingVideoPicker = true
+                    },
+                    .default(Text("Choose from Library")) {
+                        videoSourceType = .photoLibrary
+                        isShowingVideoPicker = true
+                    },
+                    .cancel()
+                ]
+            )
+        }
+        
+        .sheet(isPresented: $isShowingVideoPicker) {
+            VideoPicker(sourceType: videoSourceType) { url in
+                videoURL = url
+            }
+        }
+        
+        .sheet(isPresented: $isShowingAudioRecorder) {
+            AudioRecorderView { url in
+                audioURL = url
+            }
+        }
+    }
+
+
+    
+    private func saveProfile() {
+        guard images.count >= 3,
+              selectedSkills.count >= 5,
+              selectedInterests.count >= 5,
+              (videoURL != nil || audioURL != nil) else {
+            
+            var errorMessages = [String]()
+            
+            if images.count < 3 {
+                errorMessages.append("Please add at least 3 photos")
+            }
+            if selectedSkills.count < 5 {
+                errorMessages.append("Please add at least 5 skills")
+            }
+            if selectedInterests.count < 5 {
+                errorMessages.append("Please add at least 5 interests")
+            }
+            if videoURL == nil && audioURL == nil {
+                errorMessages.append("Please add either a video or audio")
+            }
+            
+            saveError = errorMessages.joined(separator: "\n")
+            return
+        }
+        
+        isSavingProfile = true
+        
+        let profile = UserProfile(
+            name: Auth.auth().currentUser?.displayName ?? "",
+            email: Auth.auth().currentUser?.email ?? "",
+            skillsKnown: selectedSkills,
+            skillsWanted: selectedInterests,
+            vibe: vibeNote,
+            mood: moodEmoji,
+            note:"",
+            profilePhotos: [""],
+            introMediaURL: videoURL?.absoluteString ?? ""
+            )
+        
+        profileVM.saveUserProfile(profile: profile) { result in
+            isSavingProfile = false
+            switch result {
+            case .success():
+                isLoggedIn = true
+            case .failure(let error):
+                saveError = error.localizedDescription
+            }
+        }
+    }
+    
+    
+    private func addImage(_ image: UIImage) {
+        print("Adding image to collection at position: \(selectedImageIndex?.description ?? "end")")
+        
+        
+        DispatchQueue.main.async {
+            if let selectedIndex = self.selectedImageIndex {
+                
+                if selectedIndex < self.images.count {
+                    
+                    self.images[selectedIndex] = image
+                    print("Replaced image at index \(selectedIndex)")
+                } else {
+                    
+                    while self.images.count < selectedIndex {
+                        self.images.append(UIImage())
+                    }
+                    self.images.append(image)
+                    print("Added image at index \(selectedIndex)")
+                }
+            } else if self.images.count < 6 {
+                
+                self.images.append(image)
+                print("Added image at the end, total count: \(self.images.count)")
+            } else {
+                print("Maximum number of images reached")
+            }
+            
+            
+            self.selectedImageIndex = nil
+        }
+    }
+    
+    func showImagePicker(sourceType: UIImagePickerController.SourceType) {
+        
+        self.photoSourceType = sourceType
+        
+        self.isShowingPhotoPicker = true
+    }
+    
+    
+    private func addSkill() {
+        guard !newSkill.isEmpty else { return }
+        if selectedSkills.count < 5 {
+            selectedSkills.append(newSkill)
+            newSkill = ""
+        }
+    }
+    
+    private func addInterest() {
+        guard !newInterest.isEmpty else { return }
+        if selectedInterests.count < 5 {
+            selectedInterests.append(newInterest)
+            newInterest = ""
+        }
+    }
+}
+
+
+struct DebugInfoView: View {
+    let images: [UIImage]
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Debug Info:")
+                .font(.caption)
+                .foregroundColor(.white)
+            Text("- Images count: \(images.count)")
+                .font(.caption)
+                .foregroundColor(.white)
+            ForEach(0..<images.count, id: \.self) { index in
+                Text("- Image \(index): \(Int(images[index].size.width))×\(Int(images[index].size.height))")
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(10)
+        .background(Color.black.opacity(0.5))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+}
+
+
+
+
+struct DocumentPicker: UIViewControllerRepresentable {
+    let onFilePicked: (URL) -> Void
+    
+    @Environment(\.presentationMode) var presentationMode
+    
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let types = [UTType.image]
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let parent: DocumentPicker
+        
+        init(_ parent: DocumentPicker) {
+            self.parent = parent
+        }
+        
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            print("Document picker did pick documents: \(urls)")
+            if let url = urls.first {
+                parent.onFilePicked(url)
+            }
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+        
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            print("Document picker was cancelled")
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+    }
+}
+
+
+struct ImagePicker: UIViewControllerRepresentable {
+    var selectedImage: (UIImage) -> Void
+    var sourceType: UIImagePickerController.SourceType
+    
+    @Environment(\.presentationMode) var presentationMode
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.sourceType = sourceType
+        picker.allowsEditing = true
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: ImagePicker
+        
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            print("Image picker did finish with info")
+            
+            if let editedImage = info[.editedImage] as? UIImage {
+                print("Using edited image")
+                parent.selectedImage(editedImage)
+            } else if let originalImage = info[.originalImage] as? UIImage {
+                print("Using original image")
+                parent.selectedImage(originalImage)
+            } else {
+                print("No image found in info")
+            }
+            
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            print("Image picker was cancelled")
+            parent.presentationMode.wrappedValue.dismiss()
         }
     }
 }
@@ -521,6 +979,8 @@ struct PhotoSectionView: View {
 struct VideoPicker: UIViewControllerRepresentable {
     var sourceType: UIImagePickerController.SourceType
     var onVideoPicked: (URL) -> Void
+    
+    @Environment(\.presentationMode) var presentationMode
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
@@ -531,28 +991,34 @@ struct VideoPicker: UIViewControllerRepresentable {
         picker.allowsEditing = true
         return picker
     }
-
+    
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-
+    
     class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
         let parent: VideoPicker
-        init(_ parent: VideoPicker) { self.parent = parent }
+        
+        init(_ parent: VideoPicker) {
+            self.parent = parent
+        }
+        
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             if let videoURL = info[.mediaURL] as? URL {
                 parent.onVideoPicked(videoURL)
             }
-            picker.dismiss(animated: true)
+            parent.presentationMode.wrappedValue.dismiss()
         }
+        
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
+            parent.presentationMode.wrappedValue.dismiss()
         }
     }
 }
+
 
 struct AudioRecorderView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -590,11 +1056,7 @@ struct AudioRecorderView: View {
                 }
             }
             .onTapGesture {
-                if isRecording {
-                    stopRecording()
-                } else {
-                    startRecording()
-                }
+                isRecording ? stopRecording() : startRecording()
             }
             if let recordingURL = recordingURL {
                 Button(action: {
@@ -667,9 +1129,9 @@ struct AudioRecorderView: View {
     }
 }
 
+
 struct VideoPreviewView: UIViewRepresentable {
     let url: URL
-
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
         let player = AVPlayer(url: url)
@@ -679,262 +1141,20 @@ struct VideoPreviewView: UIViewRepresentable {
         playerLayer.frame = view.bounds
         player.actionAtItemEnd = .none
         player.play()
-        let time = CMTime(seconds: 0.1, preferredTimescale: 1)
+        let startTime = CMTime(seconds: 0.1, preferredTimescale: 1)
         let interval = CMTime(seconds: 1.0, preferredTimescale: 1)
         player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { _ in
             if player.currentItem?.duration == player.currentTime() {
-                player.seek(to: time)
+                player.seek(to: startTime)
                 player.play()
             }
         }
         return view
     }
-
     func updateUIView(_ uiView: UIView, context: Context) {
         if let playerLayer = uiView.layer.sublayers?.first as? AVPlayerLayer {
             playerLayer.frame = uiView.bounds
         }
-    }
-}
-
-struct AudioPreviewView: View {
-    let url: URL
-    @State private var audioPlayer: AVAudioPlayer?
-    @State private var isPlaying = false
-    @State private var currentTime: TimeInterval = 0
-    @State private var totalDuration: TimeInterval = 0
-    @State private var timer: Timer?
-
-    var body: some View {
-        VStack {
-            HStack(spacing: 20) {
-                Button(action: {
-                    if isPlaying {
-                        pauseAudio()
-                    } else {
-                        playAudio()
-                    }
-                }) {
-                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.white)
-                }
-                VStack(alignment: .leading) {
-                    Text("Your Audio Recording")
-                        .foregroundColor(.white)
-                        .font(.headline)
-                    Text("\(timeString(time: currentTime)) / \(timeString(time: totalDuration))")
-                        .foregroundColor(.white.opacity(0.8))
-                        .font(.subheadline)
-                }
-                Spacer()
-            }
-            .padding()
-            .background(Color.blue.opacity(0.6))
-            .cornerRadius(12)
-        }
-        .onAppear { setupAudioPlayer() }
-        .onDisappear {
-            audioPlayer?.stop()
-            timer?.invalidate()
-        }
-    }
-
-    private func setupAudioPlayer() {
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer?.prepareToPlay()
-            totalDuration = audioPlayer?.duration ?? 0
-        } catch {
-            print("Error setting up audio player: \(error.localizedDescription)")
-        }
-    }
-
-    private func playAudio() {
-        audioPlayer?.play()
-        isPlaying = true
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            currentTime = audioPlayer?.currentTime ?? 0
-            if currentTime >= totalDuration {
-                pauseAudio()
-                currentTime = 0
-            }
-        }
-    }
-
-    private func pauseAudio() {
-        audioPlayer?.pause()
-        isPlaying = false
-        timer?.invalidate()
-    }
-
-    private func timeString(time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-}
-
-@available(iOS 14, *)
-struct MultipleImagePicker: UIViewControllerRepresentable {
-    var onImagesSelected: ([UIImage]) -> Void
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var configuration = PHPickerConfiguration()
-        configuration.filter = .images
-        configuration.selectionLimit = 6
-        configuration.preferredAssetRepresentationMode = .automatic
-        let picker = PHPickerViewController(configuration: configuration)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let parent: MultipleImagePicker
-        init(_ parent: MultipleImagePicker) { self.parent = parent }
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
-            guard !results.isEmpty else { return }
-            let dispatchGroup = DispatchGroup()
-            var images = [UIImage]()
-            for result in results {
-                dispatchGroup.enter()
-                result.itemProvider.loadObject(ofClass: UIImage.self) { reading, error in
-                    defer { dispatchGroup.leave() }
-                    if let image = reading as? UIImage, error == nil {
-                        images.append(image)
-                    }
-                }
-            }
-            dispatchGroup.notify(queue: .main) {
-                self.parent.onImagesSelected(images)
-            }
-        }
-    }
-}
-
-struct ImagePicker: UIViewControllerRepresentable {
-    var selectedImage: (UIImage) -> Void
-    var sourceType: UIImagePickerController.SourceType
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = sourceType
-        picker.allowsEditing = true
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let parent: ImagePicker
-        init(_ parent: ImagePicker) { self.parent = parent }
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let editedImage = info[.editedImage] as? UIImage {
-                parent.selectedImage(editedImage)
-            } else if let originalImage = info[.originalImage] as? UIImage {
-                parent.selectedImage(originalImage)
-            }
-            picker.dismiss(animated: true)
-        }
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
-        }
-    }
-}
-
-struct BubbleTag: View {
-    let text: String
-    var onDelete: (() -> Void)? = nil
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Text(text)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white)
-                .lineLimit(1)
-            if let onDelete = onDelete {
-                Button(action: onDelete) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 12)
-        .background(Color.blue)
-        .clipShape(Capsule())
-    }
-}
-
-struct FlowLayout<Data: RandomAccessCollection, Content: View>: View where Data.Element: Hashable {
-    @State private var totalHeight: CGFloat = .zero
-    let data: Data
-    let spacing: CGFloat
-    let alignment: HorizontalAlignment
-    let content: (Data.Element) -> Content
-
-    init(data: Data,
-         spacing: CGFloat = 8,
-         alignment: HorizontalAlignment = .leading,
-         @ViewBuilder content: @escaping (Data.Element) -> Content) {
-        self.data = data
-        self.spacing = spacing
-        self.alignment = alignment
-        self.content = content
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            self.generateContent(in: geo)
-        }
-        .frame(height: totalHeight)
-    }
-
-    private func generateContent(in geo: GeometryProxy) -> some View {
-        var xOffset: CGFloat = 0
-        var yOffset: CGFloat = 0
-
-        return ZStack(alignment: .topLeading) {
-            ForEach(data, id: \.self) { item in
-                content(item)
-                    .padding(.all, spacing)
-                    .alignmentGuide(.leading, computeValue: { dimension in
-                        if xOffset + dimension.width > geo.size.width {
-                            xOffset = 0
-                            yOffset += dimension.height + spacing
-                        }
-                        let result = xOffset
-                        xOffset += dimension.width + spacing
-                        return result
-                    })
-                    .alignmentGuide(.top, computeValue: { _ in
-                        let result = yOffset
-                        return result
-                    })
-            }
-        }
-        .background(
-            GeometryReader { internalGeo -> Color in
-                DispatchQueue.main.async {
-                    self.totalHeight = internalGeo.size.height
-                }
-                return Color.clear
-            }
-        )
     }
 }
 

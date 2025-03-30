@@ -1,10 +1,3 @@
-//
-//  ExplorePage.swift
-//  Swappi
-//
-//  Created by Asmi Kachare on 3/29/25.
-//
-
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -13,185 +6,147 @@ struct ExploreView: View {
     @StateObject var profileVM = ProfileViewModel()
     @State var otherUsers: [UserProfile] = []
     @State var currentUser: UserProfile? = nil
-
-    let pastelColors: [Color] = [
-        Color(red: 0.95, green: 0.88, blue: 1.0),
-        Color(red: 0.87, green: 0.94, blue: 1.0),
-        Color(red: 0.94, green: 1.0, blue: 0.87),
-        Color(red: 1.0, green: 0.94, blue: 0.87),
-        Color(red: 1.0, green: 0.88, blue: 0.95)
+    
+    
+    private let columns = [
+        GridItem(.flexible(), spacing: 16),
+        GridItem(.flexible(), spacing: 16)
     ]
-
+    
     var body: some View {
-        let pairedUsers = Array(otherUsers.enumerated())
-        let leftColumnUsers = pairedUsers.filter { $0.offset % 2 == 0 }
-        let rightColumnUsers = pairedUsers.filter { $0.offset % 2 == 1 }
-
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                VStack(spacing: 0) {
-                    Text("Explore")
-                        .font(.system(size: 28, weight: .bold))
-                        .padding(10)
-
-                    ScrollView {
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(spacing: 12) {
-                                ForEach(leftColumnUsers, id: \.offset) { pair in
-                                    let index = pair.offset
-                                    let user = pair.element
-                                    VStack {
-                                        NavigationLink(destination:
-                                            ProfileDetailPage(
-                                                name: user.name,
-                                                vibeEmoji: "🌟",
-                                                skillsKnown: user.skillsKnown,
-                                                skillsToLearn: user.skillsWanted,
-                                                moodEmoji: user.mood,
-                                                profileId: user.uid
-                                            )
-                                        ) {
-                                            ExploreCard(
-                                                index: index,
-                                                color: pastelColors[index % pastelColors.count],
-                                                username: user.name,
-                                                vibeEmoji: "🌟",
-                                                skills: user.skillsKnown
-                                            )
-                                        }
-
-                                        if let currentUser = currentUser {
-                                            Button("🤝 Match") {
-                                                let score = profileVM.basicMatchScore(userA: currentUser, userB: user)
-                                                profileVM.storeMatch(currentUID: currentUser.uid, matchUID: user.uid, score: score)
-                                            }
-                                            .font(.caption)
-                                            .padding(6)
-                                            .background(Color.blue.opacity(0.8))
-                                            .foregroundColor(.white)
-                                            .cornerRadius(8)
-                                        }
-                                    }
-                                }
+            VStack(spacing: 0) {
+                Text("Explore")
+                    .font(.system(size: 32, weight: .bold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+                
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(Array(otherUsers.enumerated()), id: \.offset) { index, user in
+                            NavigationLink(destination: ProfileDetailPage(
+                                name: user.name,
+                                vibeEmoji: user.vibe,
+                                skillsKnown: user.skillsKnown,
+                                skillsToLearn: user.skillsWanted,
+                                moodEmoji: user.mood,
+                                profileId: user.id ?? "",
+                                profilePhotos: user.profilePhotos
+                            )) {
+                                
+                                PinterestCard(
+                                    user: user,
+                                    height: [260, 220, 240, 200, 280][index % 5]
+                                )
                             }
-                            VStack(spacing: 12) {
-                                ForEach(rightColumnUsers, id: \.offset) { pair in
-                                    let index = pair.offset
-                                    let user = pair.element
-                                    VStack {
-                                        NavigationLink(destination:
-                                            ProfileDetailPage(
-                                                name: user.name,
-                                                vibeEmoji: "🌟",
-                                                skillsKnown: user.skillsKnown,
-                                                skillsToLearn: user.skillsWanted,
-                                                moodEmoji: user.mood,
-                                                profileId: user.uid
-                                            )
-                                        ) {
-                                            ExploreCard(
-                                                index: index,
-                                                color: pastelColors[index % pastelColors.count],
-                                                username: user.name,
-                                                vibeEmoji: "🌟",
-                                                skills: user.skillsKnown
-                                            )
-                                        }
-
-                                        if let currentUser = currentUser {
-                                            Button("🤝 Match") {
-                                                let score = profileVM.basicMatchScore(userA: currentUser, userB: user)
-                                                profileVM.storeMatch(currentUID: currentUser.uid, matchUID: user.uid, score: score)
-                                            }
-                                            .font(.caption)
-                                            .padding(6)
-                                            .background(Color.blue.opacity(0.8))
-                                            .foregroundColor(.white)
-                                            .cornerRadius(8)
-                                        }
-                                    }
-                                }
-                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 100)
                     }
+                    .padding(16)
+                    .padding(.bottom, 80)
                 }
             }
-            .onAppear {
-                profileVM.fetchOtherUserProfiles { users in
-                    guard let currentUID = Auth.auth().currentUser?.uid else { return }
-
-                    Firestore.firestore().collection("users").document(currentUID).getDocument { snapshot, error in
-                        guard let data = snapshot?.data() else { return }
-
-                        let current = UserProfile(
-                            name: data["name"] as? String ?? "",
-                            email: data["email"] as? String ?? "",
-                            vibe: data["vibe"] as? String ?? "",
-                            mood: data["mood"] as? String ?? "",
-                            skillsKnown: data["skillsKnown"] as? [String] ?? [],
-                            skillsWanted: data["skillsWanted"] as? [String] ?? [],
-                            profilePhotos: data["profilePhotos"] as? [String] ?? [],
-                            introMediaURL: data["introMediaURL"] as? String ?? "",
-                            note: data["note"] as? String ?? "",
-                            uid: currentUID
-                        )
-
-                        self.currentUser = current
-
-                        let scoredUsers = users.map { user in
-                            return (user, profileVM.basicMatchScore(userA: current, userB: user))
-                        }.sorted(by: { $0.1 > $1.1 })
-
-                        self.otherUsers = scoredUsers.map { $0.0 }
-                    }
-                }
+            .onAppear(perform: loadUsers)
+            .background(Color(UIColor.systemBackground))
+        }
+    }
+    
+    private func loadUsers() {
+        profileVM.fetchOtherUserProfiles { users in
+            guard let currentUID = Auth.auth().currentUser?.uid else { return }
+            
+            Firestore.firestore().collection("users").document(currentUID).getDocument { snapshot, error in
+                guard let data = snapshot?.data() else { return }
+                
+                let current = UserProfile(
+                    name: data["name"] as? String ?? "",
+                    email: data["email"] as? String ?? "",
+                    skillsKnown: data["skillsKnown"] as? [String] ?? [],
+                    skillsWanted: data["skillsWanted"] as? [String] ?? [],
+                    vibe: data["vibe"] as? String ?? "",
+                    mood: data["mood"] as? String ?? "",
+                    note: data["note"] as? String ?? "",
+                    profilePhotos: data["profilePhotos"] as? [String] ?? [],
+                    introMediaURL: data["introMediaURL"] as? String ?? ""
+                )
+                
+                self.currentUser = current
+                
+                let scoredUsers = users.map { user in
+                    (user, profileVM.basicMatchScore(userA: current, userB: user))
+                }.sorted(by: { $0.1 > $1.1 })
+                
+                self.otherUsers = scoredUsers.map { $0.0 }
             }
-            .background(Color(red: 0.98, green: 0.98, blue: 1.0).ignoresSafeArea())
         }
     }
 }
 
-struct ExploreCard: View {
-    let index: Int
-    let color: Color
-    let username: String
-    let vibeEmoji: String
-    let skills: [String]
-
+struct PinterestCard: View {
+    let user: UserProfile
+    let height: CGFloat
+    
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Rectangle()
-                .fill(color)
-                .frame(height: CGFloat.random(in: 200...300))
-                .cornerRadius(16)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(vibeEmoji)
-                        .font(.system(size: 18))
-
-                    Text(username)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .shadow(radius: 1)
+        VStack(alignment: .leading, spacing: 0) {
+            
+            if let imageURL = user.profilePhotos.first, !imageURL.isEmpty {
+                AsyncImage(url: URL(string: imageURL)) { phase in
+                    switch phase {
+                    case .empty:
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: height)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: height)
+                            .clipped()
+                    case .failure:
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: height)
+                    @unknown default:
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: height)
+                    }
                 }
-
-                Text(skills.joined(separator: " • "))
-                    .font(.caption2)
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .shadow(radius: 1)
+                .cornerRadius(16)
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(height: height)
+                    .cornerRadius(16)
             }
-            .padding(10)
-            .background(Color.black.opacity(0.25))
-            .cornerRadius(12)
-            .padding(10)
+            
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Text(user.mood)
+                        .font(.system(size: 16))
+                    Text(user.name)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                }
+                
+                if !user.skillsKnown.isEmpty {
+                    Text(user.skillsKnown.prefix(2).joined(separator: " • "))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
         }
+        .background(Color(UIColor.systemBackground))
         .cornerRadius(16)
-        .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 2)
+        
+        .padding(4)
     }
 }
 

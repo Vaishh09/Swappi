@@ -1,10 +1,3 @@
-//
-//  MainView.swift
-//  Swappi
-//
-//  Created by Nysa Jain on 29/03/25.
-//
-
 import SwiftUI
 
 enum Tab {

@@ -1,16 +1,9 @@
-//
-//  FirebaseStorageManager.swift
-//  Swappi
-//
-//  Created by Vaishnavi Mahajan on 3/29/25.
-//
-
 import FirebaseStorage
 import UIKit
 
 class FirebaseStorageManager {
 
-    // Upload a single image and get its URL
+    
     static func uploadImage(_ image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         let storageRef = Storage.storage().reference()
         let imageData = image.jpegData(compressionQuality: 0.8)
@@ -38,7 +31,7 @@ class FirebaseStorageManager {
         }
     }
 
-    // Upload multiple images
+    
     static func uploadMultipleImages(_ images: [UIImage], completion: @escaping ([String]) -> Void) {
         var uploadedURLs: [String] = []
         let dispatchGroup = DispatchGroup()
@@ -61,7 +54,7 @@ class FirebaseStorageManager {
         }
     }
 
-    // Upload video/audio file
+    
     static func uploadIntroMedia(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
         let storageRef = Storage.storage().reference()
         let fileName = UUID().uuidString + "_" + fileURL.lastPathComponent
