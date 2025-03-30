@@ -10,7 +10,6 @@ import SwiftUI
 struct CreateAccPage: View {
     @Environment(\.presentationMode) var presentationMode
     
-    // User input fields
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var email = ""
