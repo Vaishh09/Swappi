@@ -12,7 +12,6 @@ struct ChatPage: View {
     let userName: String
     let vibeEmoji: String
 
-    // Dummy messages
     @State private var messages: [ChatMessage] = [
         ChatMessage(text: "Hey! Super excited to learn painting from you!", isMe: false),
         ChatMessage(text: "Sameee! I’ve been wanting to swap with someone who knows watercolor 🎨", isMe: true),
@@ -24,7 +23,6 @@ struct ChatPage: View {
 
     var body: some View {
         VStack {
-            // Top bar
             HStack(spacing: 8) {
                 Text(vibeEmoji)
                 Text(userName)
@@ -35,7 +33,6 @@ struct ChatPage: View {
             .padding()
             .background(.ultraThinMaterial)
 
-            // Chat bubble list
             ScrollView {
                 VStack(spacing: 10) {
                     ForEach(messages) { msg in
@@ -56,7 +53,6 @@ struct ChatPage: View {
                 }
             }
 
-            // Message input bar
             HStack {
                 TextField("Type a message...", text: $newMessage)
                     .textFieldStyle(RoundedBorderTextFieldStyle())

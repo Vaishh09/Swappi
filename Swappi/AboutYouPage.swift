@@ -277,7 +277,7 @@ struct AboutYouPage: View {
                     .padding(.horizontal)
                     .padding(.top, 20)
                     
-                    NavigationLink(destination: ExplorePage()) {
+                    NavigationLink(destination: ExploreView()) {
                         Text("Save Profile")
                             .fontWeight(.semibold)
                             .foregroundColor(.white)

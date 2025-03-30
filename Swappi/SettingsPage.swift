@@ -39,8 +39,6 @@ struct SettingsPage: View {
                     .padding(.bottom, 100)
                 }
             }
-
-            FloatingNavBar()
         }
         .background(Color(red: 0.98, green: 0.98, blue: 1.0).ignoresSafeArea())
     }

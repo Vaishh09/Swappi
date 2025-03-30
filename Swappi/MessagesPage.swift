@@ -65,7 +65,6 @@ struct MessagesPage: View {
                         .padding(.bottom, 100)
                     }
                 }
-                FloatingNavBar()
             }
 
             

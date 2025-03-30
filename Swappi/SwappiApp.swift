@@ -19,7 +19,7 @@ struct SwappiApp: App {
 
     var body: some Scene {
         WindowGroup {
-            FrontPage()
+            ContentView()
         }
     }
 }

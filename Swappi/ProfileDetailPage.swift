@@ -16,8 +16,7 @@ struct ProfileDetailPage: View {
     let skillsKnown: [String]
     let skillsToLearn: [String]
     let moodEmoji: String
-    let profileId: String // Firebase document ID
-
+    let profileId: String
     @State private var isSaved = false
 
     var body: some View {
@@ -73,10 +72,8 @@ struct ProfileDetailPage: View {
         .onAppear {
             checkIfSaved()
         }
-        FloatingNavBar();
     }
 
-    // 🔁 Firebase logic for saving profile
     func toggleSaveStatus() {
         guard let currentUser = Auth.auth().currentUser else { return }
 

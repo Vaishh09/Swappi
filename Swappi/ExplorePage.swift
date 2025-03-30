@@ -19,46 +19,68 @@ struct ExploreView: View {
     let items = Array(1...20)
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            VStack(spacing: 0) {
-                Text("Explore")
-                    .font(.system(size: 28, weight: .bold))
-                    .padding(10)
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                VStack(spacing: 0) {
+                    Text("Explore")
+                        .font(.system(size: 28, weight: .bold))
+                        .padding(10)
 
-                ScrollView {
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(spacing: 12) {
-                            ForEach(items.enumerated().filter { $0.offset % 2 == 0 }, id: \.element) { index, item in
-                                ExploreCard(
-                                    index: item,
-                                    color: pastelColors[item % pastelColors.count],
-                                    username: "Zoya",
-                                    vibeEmoji: "🎨",
-                                    skills: ["Painting", "UI Design"]
-                                )
+                    ScrollView {
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(spacing: 12) {
+                                ForEach(items.enumerated().filter { $0.offset % 2 == 0 }, id: \.element) { index, item in
+                                    NavigationLink(destination:
+                                        ProfileDetailPage(
+                                            name: "Zoya",
+                                            vibeEmoji: "🎨",
+                                            skillsKnown: ["Painting", "UI Design"],
+                                            skillsToLearn: ["3D Modeling"],
+                                            moodEmoji: "🌞",
+                                            profileId: "zoya_\(item)"
+                                        )
+                                    ) {
+                                        ExploreCard(
+                                            index: item,
+                                            color: pastelColors[item % pastelColors.count],
+                                            username: "Zoya",
+                                            vibeEmoji: "🎨",
+                                            skills: ["Painting", "UI Design"]
+                                        )
+                                    }
+                                }
+                            }
+
+                            VStack(spacing: 12) {
+                                ForEach(items.enumerated().filter { $0.offset % 2 == 1 }, id: \.element) { index, item in
+                                    NavigationLink(destination:
+                                        ProfileDetailPage(
+                                            name: "Zoya",
+                                            vibeEmoji: "🎨",
+                                            skillsKnown: ["Painting", "UI Design"],
+                                            skillsToLearn: ["3D Modeling"],
+                                            moodEmoji: "🌞",
+                                            profileId: "zoya_\(item)"
+                                        )
+                                    ) {
+                                        ExploreCard(
+                                            index: item,
+                                            color: pastelColors[item % pastelColors.count],
+                                            username: "Zoya",
+                                            vibeEmoji: "🎨",
+                                            skills: ["Painting", "UI Design"]
+                                        )
+                                    }
+                                }
                             }
                         }
-
-                        VStack(spacing: 12) {
-                            ForEach(items.enumerated().filter { $0.offset % 2 == 1 }, id: \.element) { index, item in
-                                ExploreCard(
-                                    index: item,
-                                    color: pastelColors[item % pastelColors.count],
-                                    username: "Zoya",
-                                    vibeEmoji: "🎨",
-                                    skills: ["Painting", "UI Design"]
-                                )
-                            }
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 100)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
                 }
             }
-
-            FloatingNavBar()
+            .background(Color(red: 0.98, green: 0.98, blue: 1.0).ignoresSafeArea())
         }
-        .background(Color(red: 0.98, green: 0.98, blue: 1.0).ignoresSafeArea())
     }
 }
 
@@ -105,20 +127,21 @@ struct ExploreCard: View {
 }
 
 struct FloatingNavBar: View {
+    @Binding var selectedTab: Tab
     var body: some View {
         HStack {
             Spacer()
-            NavBarIcon(icon: "magnifyingglass")
+            NavBarIcon(icon: "magnifyingglass", tab: .search, selectedTab: $selectedTab)
             Spacer()
-            NavBarIcon(icon: "message")
+            NavBarIcon(icon: "message", tab: .messages, selectedTab: $selectedTab)
             Spacer()
-            NavBarIcon(icon: "house")
+            NavBarIcon(icon: "house", tab: .home, selectedTab: $selectedTab)
             Spacer()
-            NavBarIcon(icon: "bookmark")
+            NavBarIcon(icon: "bookmark", tab: .saved, selectedTab: $selectedTab)
             Spacer()
-            NavBarIcon(icon: "gear")
+            NavBarIcon(icon: "gear", tab: .settings, selectedTab: $selectedTab)
             Spacer()
-            NavBarIcon(icon: "person.crop.circle")
+            NavBarIcon(icon: "person.crop.circle", tab: .profile, selectedTab: $selectedTab)
             Spacer()
         }
         .padding()
@@ -132,12 +155,19 @@ struct FloatingNavBar: View {
 
 struct NavBarIcon: View {
     let icon: String
+    let tab: Tab
+    @Binding var selectedTab: Tab
     var body: some View {
-        Image(systemName: icon)
-            .font(.system(size: 20, weight: .medium))
-            .foregroundColor(.primary)
+        Button(action: {
+            selectedTab = tab
+        }) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(selectedTab == tab ? .blue : .primary)
+        }
     }
 }
+    
 
 #Preview {
     ExploreView()

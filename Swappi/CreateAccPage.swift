@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct CreateAccPage: View {
     @Environment(\.presentationMode) var presentationMode
+    @AppStorage("isLoggedIn") var isLoggedIn = false
     
     @State private var firstName = ""
     @State private var lastName = ""
@@ -101,14 +103,20 @@ struct CreateAccPage: View {
                 }
                 .padding(.horizontal, 40)
                 Spacer()
-                NavigationLink(destination: AboutYouPage()) {
-                    Text("Next")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(10)
+                
+
+                Button(action: {
+                    if !firstName.isEmpty && !email.isEmpty && password == confirmPassword {
+                    isLoggedIn = true 
+                        }
+                    }) {
+                Text("Next")
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.blue)
+                .cornerRadius(10)
                 }
                 .padding(.horizontal, 40)
                 .padding(.bottom, 30)
