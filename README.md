@@ -1,5 +1,3 @@
-# WiCS HACKATHON 2025
-
 # 🌟 Swappi – Skill Swap Meets Vibes 🌈
 
 Swappi is your new favorite way to meet people *near you* by **exchanging skills, sharing vibes**, and starting real conversations. Whether you want to learn guitar 🎸, teach design 🎨, or just meet someone who’s also craving matcha 🍵 today — **Swappi matches you accordingly.**
