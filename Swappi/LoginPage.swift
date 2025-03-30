@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct LoginPage: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var username = ""
     @State private var password = ""
     @State private var isPasswordVisible = false
+    @AppStorage("isLoggedIn") var isLoggedIn = false
     
     var body: some View {
         ZStack {
@@ -82,17 +84,23 @@ struct LoginPage: View {
                 Spacer()
                 
                 Button(action: {
+                    Auth.auth().signIn(withEmail: username, password: password) { result, error in
+                        if error == nil {
+                            isLoggedIn = true
+                        }
+                    }
                 }) {
                     Text("Sign In")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(10)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.blue)
+                .cornerRadius(10)
                 }
                 .padding(.horizontal, 40)
                 .padding(.bottom, 30)
+
             }
         }
         .navigationBarHidden(true)
