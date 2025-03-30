@@ -1,4 +1,4 @@
-#WiCS HACKATHON 2025
+# WiCS HACKATHON 2025
 
 # 🌟 Swappi – Skill Swap Meets Vibes 🌈
 
