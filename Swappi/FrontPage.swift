@@ -43,7 +43,7 @@ struct FrontPage: View {
                                 .cornerRadius(10)
                         }
                         
-                        NavigationLink(destination: Text("Create Account Page")) {
+                        NavigationLink(destination: CreateAccPage()) {
                             Text("Create Account")
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)

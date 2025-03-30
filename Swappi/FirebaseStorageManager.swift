@@ -9,8 +9,8 @@ import FirebaseStorage
 import UIKit
 
 class FirebaseStorageManager {
-    
-    // Upload one image
+
+    // Upload a single image and get its URL
     static func uploadImage(_ image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         let storageRef = Storage.storage().reference()
         let imageData = image.jpegData(compressionQuality: 0.8)
@@ -23,7 +23,7 @@ class FirebaseStorageManager {
         let fileName = UUID().uuidString + ".jpg"
         let imageRef = storageRef.child("profile_images/\(fileName)")
 
-        imageRef.putData(data, metadata: nil) { metadata, error in
+        imageRef.putData(data, metadata: nil) { _, error in
             if let error = error {
                 completion(.failure(error))
             } else {
@@ -61,13 +61,13 @@ class FirebaseStorageManager {
         }
     }
 
-    // Upload intro video or audio file
+    // Upload video/audio file
     static func uploadIntroMedia(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
         let storageRef = Storage.storage().reference()
-        let fileName = UUID().uuidString + ".mov" // or .m4a
+        let fileName = UUID().uuidString + "_" + fileURL.lastPathComponent
         let mediaRef = storageRef.child("intro_media/\(fileName)")
 
-        mediaRef.putFile(from: fileURL, metadata: nil) { metadata, error in
+        mediaRef.putFile(from: fileURL, metadata: nil) { _, error in
             if let error = error {
                 completion(.failure(error))
             } else {
