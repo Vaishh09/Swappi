@@ -8,34 +8,36 @@
 import SwiftUI
 
 enum Tab {
-case search
-case messages
-case home
-case saved
-case settings
-case profile
+    case search
+    case messages
+    case home
+    case saved
+    case settings
+    case profile
 }
 
 struct MainView: View {
     @State private var selectedTab: Tab = .home
+
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 switch selectedTab {
                 case .search:
-                SearchPage()
+                    SearchPage()
                 case .messages:
-                MessagesPage()
+                    MessagesPage()
                 case .home:
-                ExploreView()
+                    ExploreView()
                 case .saved:
-                SavedPage()
+                    SavedPage()
                 case .settings:
-                SettingsPage()
+                    SettingsPage()
                 case .profile:
-                AboutYouPage()
+                    AboutYouPage()
                 }
             }
+
             FloatingNavBar(selectedTab: $selectedTab)
         }
     }

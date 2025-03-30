@@ -8,18 +8,28 @@
 import SwiftUI
 import PhotosUI
 import AVFoundation
+import FirebaseAuth
 
 struct AboutYouPage: View {
     @Environment(\.presentationMode) var presentationMode
+    @AppStorage("isLoggedIn") var isLoggedIn = false  // Will be set after full profile save
+    
+    // Media and profile data
     @State private var images: [UIImage] = []
     @State private var videoURL: URL?
     @State private var audioURL: URL?
+    
+    // Skills and Interests
     @State private var selectedSkills: [String] = []
     @State private var newSkill: String = ""
     @State private var selectedInterests: [String] = []
     @State private var newInterest: String = ""
+    
+    // Mood and vibe details
     @State private var moodEmoji = ""
     @State private var vibeNote = ""
+    
+    // Controls for pickers / sheets
     @State private var isShowingImageSourceSheet = false
     @State private var isShowingVideoPickerSheet = false
     @State private var isShowingCamera = false
@@ -30,268 +40,97 @@ struct AboutYouPage: View {
     @State private var mediaSelection: MediaType = .video
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
 
+    // Loading and error states
+    @State private var isSavingProfile = false
+    @State private var saveError: String? = nil
+
+    @StateObject var profileVM = ProfileViewModel()  // Ensure your view model is set up correctly
+
     enum MediaType: String, CaseIterable {
         case video = "Video"
         case audio = "Audio"
     }
 
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [Color(red: 1.0, green: 0.65, blue: 0.9), Color(red: 0.55, green: 0.85, blue: 1.0)]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        var body: some View {
+            NavigationStack {
+                ZStack {
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(red: 1.0, green: 0.65, blue: 0.9),
+                            Color(red: 0.55, green: 0.85, blue: 1.0)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
 
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack {
-                    HStack {
-                        Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                            Image(systemName: "chevron.left")
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(spacing: 20) {
+                        // Top bar with back button
+                            HStack {
+                                Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                                Image(systemName: "chevron.left")
+                                    .font(.title)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    }
+                                    Spacer()
+                                }
+                            .padding(.top, 10)
+
+                            Image("Swappi")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 100, height: 100)
+
+                            Text("Tell us about you!")
                                 .font(.title)
                                 .foregroundColor(.white)
-                                .padding()
-                        }
-                        Spacer()
-                    }
-                    .padding(.top, 10)
-                    
-                    Image("Swappi")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 100, height: 100)
-                    
-                    Text("Tell us about you!")
-                        .font(.title)
-                        .foregroundColor(.white)
-                        .padding(.top, 5)
-                    
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text("Add 3–6 Photos")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            Spacer()
-                            Button(action: { isShowingImageSourceSheet = true }) {
-                                Text("Upload")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
-                            ForEach(0..<6, id: \.self) { index in
-                                ZStack {
-                                    if index < images.count {
-                                        Image(uiImage: images[index])
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 100, height: 100)
-                                            .clipped()
-                                            .cornerRadius(12)
-                                            .overlay(
-                                                Button(action: {
-                                                    selectedPhotoIndex = index
-                                                    isShowingImageSourceSheet = true
-                                                }) {
-                                                    Image(systemName: "pencil.circle.fill")
-                                                        .font(.title)
-                                                        .foregroundColor(.white)
-                                                        .shadow(radius: 3)
-                                                }
-                                                .padding(8),
-                                                alignment: .topTrailing
-                                            )
-                                    } else {
-                                        Button(action: {
-                                            selectedPhotoIndex = index
-                                            isShowingImageSourceSheet = true
-                                        }) {
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5]))
-                                                .frame(width: 100, height: 100)
-                                                .overlay(
-                                                    VStack(spacing: 8) {
-                                                        Image(systemName: "plus")
-                                                            .font(.title2)
-                                                            .foregroundColor(.white)
-                                                        Text("Add")
-                                                            .font(.caption)
-                                                            .foregroundColor(.white)
-                                                    }
-                                                )
-                                                .background(Color.black.opacity(0.1))
-                                                .cornerRadius(12)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .padding(.top, 15)
-                    
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Add Video or Audio (Required)")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 40)
-                        
-                        HStack(spacing: 0) {
-                            ForEach(MediaType.allCases, id: \.self) { type in
-                                Button(action: { mediaSelection = type }) {
-                                    Text(type.rawValue)
-                                        .fontWeight(.medium)
-                                        .padding(.vertical, 12)
-                                        .frame(maxWidth: .infinity)
-                                        .background(mediaSelection == type ? Color.white.opacity(0.6) : Color.gray.opacity(0.3))
-                                        .foregroundColor(mediaSelection == type ? .black : .white)
-                                }
-                            }
-                        }
-                        .background(Color.gray.opacity(0.3))
-                        .cornerRadius(25)
-                        .padding(.horizontal, 40)
-                        
-                        Button(action: {
-                            if mediaSelection == .video {
-                                isShowingVideoPickerSheet = true
-                            } else {
-                                isShowingAudioRecorder = true
-                            }
-                        }) {
-                            HStack {
-                                Image(systemName: mediaSelection == .video ? "video.fill" : "mic.fill")
-                                Text(mediaSelection == .video ? "Upload Video" : "Record Audio")
-                            }
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue)
-                            .cornerRadius(10)
-                        }
-                        .padding(.horizontal, 40)
-                        .padding(.top, 15)
-                        
-                        if let videoURL = videoURL, mediaSelection == .video {
-                            VideoPreviewView(url: videoURL)
-                                .frame(height: 150)
-                                .cornerRadius(12)
-                                .padding(.horizontal, 40)
-                                .padding(.top, 10)
-                        } else if let audioURL = audioURL, mediaSelection == .audio {
-                            AudioPreviewView(url: audioURL)
-                                .frame(height: 80)
-                                .cornerRadius(12)
-                                .padding(.horizontal, 40)
-                                .padding(.top, 10)
-                        }
-                    }
-                    .padding(.top, 20)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Add at least 5 Skills")
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        
-                        HStack {
-                            TextField("Enter a skill", text: $newSkill)
-                                .padding()
-                                .background(Color.white.opacity(0.8))
-                                .cornerRadius(10)
+                                .padding(.top, 5)
                             
-                            Button(action: addSkill) {
-                                Text("Add")
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 8)
-                                    .background(Color.green)
-                                    .cornerRadius(8)
-                            }
-                        }
+                            // Use the extracted photo section view:
+                            PhotoSectionView(images: $images, isShowingImageSourceSheet: $isShowingImageSourceSheet)
                         
-                        FlowLayout(data: selectedSkills, spacing: 8) { skill in
-                            BubbleTag(text: skill) {
-                                if let idx = selectedSkills.firstIndex(of: skill) {
-                                    selectedSkills.remove(at: idx)
-                                }
-                            }
-                        }
-                        .padding(.top, 8)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Add at least 5 Interests")
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        
-                        HStack {
-                            TextField("Enter an interest", text: $newInterest)
-                                .padding()
-                                .background(Color.white.opacity(0.8))
-                                .cornerRadius(10)
+                            // Video/Audio section
+                            VideoAudioSection(
+                                mediaSelection: $mediaSelection,
+                                videoURL: $videoURL,
+                                audioURL: $audioURL,
+                                isShowingVideoPickerSheet: $isShowingVideoPickerSheet,
+                                isShowingAudioRecorder: $isShowingAudioRecorder
+                            )
                             
-                            Button(action: addInterest) {
-                                Text("Add")
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 8)
-                                    .background(Color.green)
-                                    .cornerRadius(8)
-                            }
-                        }
-                        
-                        FlowLayout(data: selectedInterests, spacing: 8) { interest in
-                            BubbleTag(text: interest) {
-                                if let idx = selectedInterests.firstIndex(of: interest) {
-                                    selectedInterests.remove(at: idx)
-                                }
-                            }
-                        }
-                        .padding(.top, 8)
+                            // Skills section
+                            DynamicInputSection(
+                                title: "Add at least 5 Skills",
+                                items: $selectedSkills,
+                                newItem: $newSkill,
+                                onAdd: addSkill
+                            )
+                            
+                            // Interests section
+                            DynamicInputSection(
+                                title: "Add at least 5 Interests",
+                                items: $selectedInterests,
+                                newItem: $newInterest,
+                                onAdd: addInterest
+                            )
+                            
+                            // Mood & Vibe
+                            MoodVibeSection(moodEmoji: $moodEmoji, vibeNote: $vibeNote)
+                            
+                            // In your AboutYouPage body, replace the old save button code with:
+                            SaveProfileSection(
+                                isSaving: $isSavingProfile,
+                                error: $saveError,
+                                action: saveProfile
+                            )
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    
-                    VStack(spacing: 10) {
-                        TextField("Pick a mood emoji", text: $moodEmoji)
-                            .padding()
-                            .background(Color.white.opacity(0.8))
-                            .cornerRadius(10)
-                        
-                        TextField("Vibe? (Add a note)", text: $vibeNote)
-                            .padding()
-                            .background(Color.white.opacity(0.8))
-                            .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    
-                    NavigationLink(destination: ExploreView()) {
-                        Text("Save Profile")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green)
-                            .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 60)
                 }
             }
         }
         .navigationBarHidden(true)
+        // Image Source Sheet for photos
         .actionSheet(isPresented: $isShowingImageSourceSheet) {
             ActionSheet(
                 title: Text("Select Photo"),
@@ -309,6 +148,7 @@ struct AboutYouPage: View {
                 ]
             )
         }
+        // Video Picker Sheet
         .actionSheet(isPresented: $isShowingVideoPickerSheet) {
             ActionSheet(
                 title: Text("Select Video"),
@@ -326,32 +166,75 @@ struct AboutYouPage: View {
                 ]
             )
         }
+        // Present Camera for image picking
         .sheet(isPresented: $isShowingCamera) {
-            ImagePicker(selectedImage: { image in addOrUpdateImage(image) },
-                        sourceType: .camera)
+            ImagePicker(selectedImage: { image in
+                addOrUpdateImage(image)
+            }, sourceType: .camera)
         }
+        // Present Photo Library for multiple images (iOS 14+)
         .sheet(isPresented: $isShowingPhotoLibrary) {
             if #available(iOS 14, *) {
                 MultipleImagePicker(onImagesSelected: { selectedImages in
                     addMultipleImages(selectedImages)
                 })
             } else {
-                ImagePicker(selectedImage: { image in addOrUpdateImage(image) },
-                            sourceType: .photoLibrary)
+                ImagePicker(selectedImage: { image in
+                    addOrUpdateImage(image)
+                }, sourceType: .photoLibrary)
             }
         }
+        // Present Video Picker
         .sheet(isPresented: $isShowingVideoPicker) {
             VideoPicker(sourceType: sourceType) { url in
                 self.videoURL = url
             }
         }
+        // Present Audio Recorder
         .sheet(isPresented: $isShowingAudioRecorder) {
             AudioRecorderView { url in
                 self.audioURL = url
             }
         }
     }
-
+    
+    // Add this method in your AboutYouPage struct
+    private func saveProfile() {
+        // Your existing validation and save logic here
+        guard !selectedSkills.isEmpty,
+              !selectedInterests.isEmpty,
+              (videoURL != nil || audioURL != nil) else {
+            saveError = "Please complete all required fields."
+            return
+        }
+        
+        isSavingProfile = true
+        
+        let profile = UserProfile(
+            name: "Zoya Debug",
+            email: "zoya@debug.com",
+            vibe: "Matcha",
+            mood: "😊",
+            skillsKnown: ["Swift", "UI"],
+            skillsWanted: ["Firebase"],
+            profilePhotos: [],
+            introMediaURL: "",
+            note: "Test User",
+            uid: UUID().uuidString
+        )
+        
+        profileVM.saveUserProfile(profile: profile) { result in
+            isSavingProfile = false
+            switch result {
+            case .success():
+                isLoggedIn = true
+            case .failure(let error):
+                saveError = error.localizedDescription
+            }
+        }
+    }
+    
+    // MARK: - Image Handling Functions
     private func addOrUpdateImage(_ image: UIImage) {
         if let index = selectedPhotoIndex {
             if index < images.count {
@@ -362,7 +245,7 @@ struct AboutYouPage: View {
             selectedPhotoIndex = nil
         }
     }
-
+    
     private func addMultipleImages(_ newImages: [UIImage]) {
         if let index = selectedPhotoIndex, index < images.count {
             if !newImages.isEmpty {
@@ -375,7 +258,7 @@ struct AboutYouPage: View {
         }
         selectedPhotoIndex = nil
     }
-
+    
     private func addRemainingImages(_ newImages: [UIImage]) {
         for image in newImages {
             if images.count < 6 {
@@ -386,6 +269,7 @@ struct AboutYouPage: View {
         }
     }
     
+    // MARK: - Skill and Interest Functions
     private func addSkill() {
         guard !newSkill.isEmpty else { return }
         selectedSkills.append(newSkill)
@@ -398,6 +282,241 @@ struct AboutYouPage: View {
         newInterest = ""
     }
 }
+
+struct VideoAudioSection: View {
+    @Binding var mediaSelection: AboutYouPage.MediaType
+    @Binding var videoURL: URL?
+    @Binding var audioURL: URL?
+    @Binding var isShowingVideoPickerSheet: Bool
+    @Binding var isShowingAudioRecorder: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Add Video or Audio (Required)")
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding(.horizontal, 40)
+            
+            HStack(spacing: 0) {
+                ForEach(AboutYouPage.MediaType.allCases, id: \.self) { type in
+                    Button(action: { mediaSelection = type }) {
+                        Text(type.rawValue)
+                            .fontWeight(.medium)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(mediaSelection == type ? Color.white.opacity(0.6) : Color.gray.opacity(0.3))
+                            .foregroundColor(mediaSelection == type ? .black : .white)
+                    }
+                }
+            }
+            .background(Color.gray.opacity(0.3))
+            .cornerRadius(25)
+            .padding(.horizontal, 40)
+            
+            Button(action: {
+                if mediaSelection == .video {
+                    isShowingVideoPickerSheet = true
+                } else {
+                    isShowingAudioRecorder = true
+                }
+            }) {
+                HStack {
+                    Image(systemName: mediaSelection == .video ? "video.fill" : "mic.fill")
+                    Text(mediaSelection == .video ? "Upload Video" : "Record Audio")
+                }
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.blue)
+                .cornerRadius(10)
+            }
+            .padding(.horizontal, 40)
+            .padding(.top, 15)
+            
+            if mediaSelection == .video, let videoURL = videoURL {
+                VideoPreviewView(url: videoURL)
+                    .frame(height: 150)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 40)
+                    .padding(.top, 10)
+            } else if mediaSelection == .audio, let audioURL = audioURL {
+                AudioPreviewView(url: audioURL)
+                    .frame(height: 80)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 40)
+                    .padding(.top, 10)
+            }
+        }
+    }
+}
+
+struct DynamicInputSection: View {
+    let title: String
+    @Binding var items: [String]
+    @Binding var newItem: String
+    var onAdd: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            HStack {
+                TextField("Enter \(title.lowercased())", text: $newItem)
+                    .padding()
+                    .background(Color.white.opacity(0.8))
+                    .cornerRadius(10)
+                
+                Button(action: onAdd) {
+                    Text("Add")
+                        .foregroundColor(.white)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color.green)
+                        .cornerRadius(8)
+                }
+            }
+            
+            FlowLayout(data: items, spacing: 8) { item in
+                BubbleTag(text: item) {
+                    if let idx = items.firstIndex(of: item) {
+                        items.remove(at: idx)
+                    }
+                }
+            }
+            .padding(.top, 8)
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct MoodVibeSection: View {
+    @Binding var moodEmoji: String
+    @Binding var vibeNote: String
+    
+    var body: some View {
+        VStack(spacing: 10) {
+            TextField("Pick a mood emoji", text: $moodEmoji)
+                .padding()
+                .background(Color.white.opacity(0.8))
+                .cornerRadius(10)
+            
+            TextField("Vibe? (Add a note)", text: $vibeNote)
+                .padding()
+                .background(Color.white.opacity(0.8))
+                .cornerRadius(10)
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct SaveProfileSection: View {
+    @Binding var isSaving: Bool
+    @Binding var error: String?
+    var action: () -> Void
+    
+    var body: some View {
+        Group {
+            if isSaving {
+                ProgressView("Saving Profile...")
+            }
+            if let error = error {
+                Text("❌ \(error)")
+                    .foregroundColor(.red)
+            }
+            
+            Button(action: action) {
+                Text("Save Profile")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.green)
+                    .cornerRadius(10)
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct PhotoSectionView: View {
+    @Binding var images: [UIImage]
+    @Binding var isShowingImageSourceSheet: Bool
+    let maxPhotos: Int = 6
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Text("Add 3–6 Photos")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Spacer()
+                Button(action: { isShowingImageSourceSheet = true }) {
+                    Text("Upload")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue)
+                        .cornerRadius(8)
+                }
+            }
+            .padding(.horizontal)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                ForEach(0..<maxPhotos, id: \.self) { index in
+                    ZStack {
+                        if index < images.count {
+                            Image(uiImage: images[index])
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipped()
+                                .cornerRadius(12)
+                                .overlay(
+                                    Button(action: {
+                                        // Action to edit the image at this index
+                                    }) {
+                                        Image(systemName: "pencil.circle.fill")
+                                            .font(.title)
+                                            .foregroundColor(.white)
+                                            .shadow(radius: 3)
+                                    }
+                                    .padding(8),
+                                    alignment: .topTrailing
+                                )
+                        } else {
+                            Button(action: {
+                                isShowingImageSourceSheet = true
+                            }) {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5]))
+                                    .frame(width: 100, height: 100)
+                                    .overlay(
+                                        VStack(spacing: 8) {
+                                            Image(systemName: "plus")
+                                                .font(.title2)
+                                                .foregroundColor(.white)
+                                            Text("Add")
+                                                .font(.caption)
+                                                .foregroundColor(.white)
+                                        }
+                                    )
+                                    .background(Color.black.opacity(0.1))
+                                    .cornerRadius(12)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
 
 struct VideoPicker: UIViewControllerRepresentable {
     var sourceType: UIImagePickerController.SourceType

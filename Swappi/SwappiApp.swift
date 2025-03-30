@@ -20,6 +20,7 @@ struct SwappiApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+//            FrontPage()
         }
     }
 }

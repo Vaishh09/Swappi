@@ -1,22 +1,19 @@
-//
-//  LoginPage.swift
-//  Swappi
-//
-//  Created by Asmi Kachare on 3/29/25.
-//
-
 import SwiftUI
 import FirebaseAuth
 
 struct LoginPage: View {
     @Environment(\.presentationMode) var presentationMode
-    @State private var username = ""
+    @State private var email = ""      // Changed from username to email
     @State private var password = ""
     @State private var isPasswordVisible = false
     @AppStorage("isLoggedIn") var isLoggedIn = false
     
+    @State private var errorMessage: String? = nil
+    @State private var isLoading: Bool = false
+    
     var body: some View {
         ZStack {
+            // Background Gradient
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color(red: 1.0, green: 0.65, blue: 0.9),
@@ -28,9 +25,9 @@ struct LoginPage: View {
             .ignoresSafeArea()
             
             VStack {
+                // Back Button
                 HStack {
                     Button(action: {
-
                         presentationMode.wrappedValue.dismiss()
                     }) {
                         Image(systemName: "chevron.left")
@@ -38,11 +35,11 @@ struct LoginPage: View {
                             .foregroundColor(.white)
                             .padding()
                     }
-                    
                     Spacer()
                 }
                 .padding(.top, 10)
                 
+                // App Logo
                 Image("Swappi")
                     .resizable()
                     .scaledToFit()
@@ -51,8 +48,9 @@ struct LoginPage: View {
                 
                 Spacer()
                 
+                // Input Fields
                 VStack(spacing: 20) {
-                    TextField("Username", text: $username)
+                    TextField("Email", text: $email)
                         .padding()
                         .background(Color.white.opacity(0.8))
                         .cornerRadius(10)
@@ -78,32 +76,59 @@ struct LoginPage: View {
                     .padding()
                     .background(Color.white.opacity(0.8))
                     .cornerRadius(10)
+                    
+                    // Error Message
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
                 }
                 .padding(.horizontal, 40)
                 
                 Spacer()
                 
+                // Loading Indicator
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .padding(.bottom, 20)
+                }
+                
+                // Sign In Button
                 Button(action: {
-                    Auth.auth().signIn(withEmail: username, password: password) { result, error in
-                        if error == nil {
-                            isLoggedIn = true
-                        }
-                    }
+                    signIn()
                 }) {
                     Text("Sign In")
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.blue)
-                .cornerRadius(10)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .cornerRadius(10)
                 }
                 .padding(.horizontal, 40)
                 .padding(.bottom, 30)
-
             }
         }
         .navigationBarHidden(true)
+    }
+    
+    // MARK: - Sign In Function
+    func signIn() {
+        // Clear any previous error and start loading
+        errorMessage = nil
+        isLoading = true
+        
+        Auth.auth().signIn(withEmail: email, password: password) { result, error in
+            isLoading = false
+            if let error = error {
+                errorMessage = error.localizedDescription
+                print("Error signing in: \(error.localizedDescription)")
+            } else {
+                isLoggedIn = true
+            }
+        }
     }
 }
 

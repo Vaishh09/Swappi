@@ -6,8 +6,14 @@
 //
 
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
 struct ExploreView: View {
+    @StateObject var profileVM = ProfileViewModel()
+    @State var otherUsers: [UserProfile] = []
+    @State var currentUser: UserProfile? = nil
+
     let pastelColors: [Color] = [
         Color(red: 0.95, green: 0.88, blue: 1.0),
         Color(red: 0.87, green: 0.94, blue: 1.0),
@@ -16,9 +22,11 @@ struct ExploreView: View {
         Color(red: 1.0, green: 0.88, blue: 0.95)
     ]
 
-    let items = Array(1...20)
-
     var body: some View {
+        let pairedUsers = Array(otherUsers.enumerated())
+        let leftColumnUsers = pairedUsers.filter { $0.offset % 2 == 0 }
+        let rightColumnUsers = pairedUsers.filter { $0.offset % 2 == 1 }
+
         NavigationStack {
             ZStack(alignment: .bottom) {
                 VStack(spacing: 0) {
@@ -29,53 +37,114 @@ struct ExploreView: View {
                     ScrollView {
                         HStack(alignment: .top, spacing: 12) {
                             VStack(spacing: 12) {
-                                ForEach(items.enumerated().filter { $0.offset % 2 == 0 }, id: \.element) { index, item in
-                                    NavigationLink(destination:
-                                        ProfileDetailPage(
-                                            name: "Zoya",
-                                            vibeEmoji: "🎨",
-                                            skillsKnown: ["Painting", "UI Design"],
-                                            skillsToLearn: ["3D Modeling"],
-                                            moodEmoji: "🌞",
-                                            profileId: "zoya_\(item)"
-                                        )
-                                    ) {
-                                        ExploreCard(
-                                            index: item,
-                                            color: pastelColors[item % pastelColors.count],
-                                            username: "Zoya",
-                                            vibeEmoji: "🎨",
-                                            skills: ["Painting", "UI Design"]
-                                        )
+                                ForEach(leftColumnUsers, id: \.offset) { pair in
+                                    let index = pair.offset
+                                    let user = pair.element
+                                    VStack {
+                                        NavigationLink(destination:
+                                            ProfileDetailPage(
+                                                name: user.name,
+                                                vibeEmoji: "🌟",
+                                                skillsKnown: user.skillsKnown,
+                                                skillsToLearn: user.skillsWanted,
+                                                moodEmoji: user.mood,
+                                                profileId: user.uid
+                                            )
+                                        ) {
+                                            ExploreCard(
+                                                index: index,
+                                                color: pastelColors[index % pastelColors.count],
+                                                username: user.name,
+                                                vibeEmoji: "🌟",
+                                                skills: user.skillsKnown
+                                            )
+                                        }
+
+                                        if let currentUser = currentUser {
+                                            Button("🤝 Match") {
+                                                let score = profileVM.basicMatchScore(userA: currentUser, userB: user)
+                                                profileVM.storeMatch(currentUID: currentUser.uid, matchUID: user.uid, score: score)
+                                            }
+                                            .font(.caption)
+                                            .padding(6)
+                                            .background(Color.blue.opacity(0.8))
+                                            .foregroundColor(.white)
+                                            .cornerRadius(8)
+                                        }
                                     }
                                 }
                             }
-
                             VStack(spacing: 12) {
-                                ForEach(items.enumerated().filter { $0.offset % 2 == 1 }, id: \.element) { index, item in
-                                    NavigationLink(destination:
-                                        ProfileDetailPage(
-                                            name: "Zoya",
-                                            vibeEmoji: "🎨",
-                                            skillsKnown: ["Painting", "UI Design"],
-                                            skillsToLearn: ["3D Modeling"],
-                                            moodEmoji: "🌞",
-                                            profileId: "zoya_\(item)"
-                                        )
-                                    ) {
-                                        ExploreCard(
-                                            index: item,
-                                            color: pastelColors[item % pastelColors.count],
-                                            username: "Zoya",
-                                            vibeEmoji: "🎨",
-                                            skills: ["Painting", "UI Design"]
-                                        )
+                                ForEach(rightColumnUsers, id: \.offset) { pair in
+                                    let index = pair.offset
+                                    let user = pair.element
+                                    VStack {
+                                        NavigationLink(destination:
+                                            ProfileDetailPage(
+                                                name: user.name,
+                                                vibeEmoji: "🌟",
+                                                skillsKnown: user.skillsKnown,
+                                                skillsToLearn: user.skillsWanted,
+                                                moodEmoji: user.mood,
+                                                profileId: user.uid
+                                            )
+                                        ) {
+                                            ExploreCard(
+                                                index: index,
+                                                color: pastelColors[index % pastelColors.count],
+                                                username: user.name,
+                                                vibeEmoji: "🌟",
+                                                skills: user.skillsKnown
+                                            )
+                                        }
+
+                                        if let currentUser = currentUser {
+                                            Button("🤝 Match") {
+                                                let score = profileVM.basicMatchScore(userA: currentUser, userB: user)
+                                                profileVM.storeMatch(currentUID: currentUser.uid, matchUID: user.uid, score: score)
+                                            }
+                                            .font(.caption)
+                                            .padding(6)
+                                            .background(Color.blue.opacity(0.8))
+                                            .foregroundColor(.white)
+                                            .cornerRadius(8)
+                                        }
                                     }
                                 }
                             }
                         }
                         .padding(.horizontal, 16)
                         .padding(.bottom, 100)
+                    }
+                }
+            }
+            .onAppear {
+                profileVM.fetchOtherUserProfiles { users in
+                    guard let currentUID = Auth.auth().currentUser?.uid else { return }
+
+                    Firestore.firestore().collection("users").document(currentUID).getDocument { snapshot, error in
+                        guard let data = snapshot?.data() else { return }
+
+                        let current = UserProfile(
+                            name: data["name"] as? String ?? "",
+                            email: data["email"] as? String ?? "",
+                            vibe: data["vibe"] as? String ?? "",
+                            mood: data["mood"] as? String ?? "",
+                            skillsKnown: data["skillsKnown"] as? [String] ?? [],
+                            skillsWanted: data["skillsWanted"] as? [String] ?? [],
+                            profilePhotos: data["profilePhotos"] as? [String] ?? [],
+                            introMediaURL: data["introMediaURL"] as? String ?? "",
+                            note: data["note"] as? String ?? "",
+                            uid: currentUID
+                        )
+
+                        self.currentUser = current
+
+                        let scoredUsers = users.map { user in
+                            return (user, profileVM.basicMatchScore(userA: current, userB: user))
+                        }.sorted(by: { $0.1 > $1.1 })
+
+                        self.otherUsers = scoredUsers.map { $0.0 }
                     }
                 }
             }
@@ -125,49 +194,6 @@ struct ExploreCard: View {
         .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 2)
     }
 }
-
-struct FloatingNavBar: View {
-    @Binding var selectedTab: Tab
-    var body: some View {
-        HStack {
-            Spacer()
-            NavBarIcon(icon: "magnifyingglass", tab: .search, selectedTab: $selectedTab)
-            Spacer()
-            NavBarIcon(icon: "message", tab: .messages, selectedTab: $selectedTab)
-            Spacer()
-            NavBarIcon(icon: "house", tab: .home, selectedTab: $selectedTab)
-            Spacer()
-            NavBarIcon(icon: "bookmark", tab: .saved, selectedTab: $selectedTab)
-            Spacer()
-            NavBarIcon(icon: "gear", tab: .settings, selectedTab: $selectedTab)
-            Spacer()
-            NavBarIcon(icon: "person.crop.circle", tab: .profile, selectedTab: $selectedTab)
-            Spacer()
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(30)
-        .shadow(radius: 5)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 10)
-    }
-}
-
-struct NavBarIcon: View {
-    let icon: String
-    let tab: Tab
-    @Binding var selectedTab: Tab
-    var body: some View {
-        Button(action: {
-            selectedTab = tab
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundColor(selectedTab == tab ? .blue : .primary)
-        }
-    }
-}
-    
 
 #Preview {
     ExploreView()
