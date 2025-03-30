@@ -38,10 +38,44 @@ Built in under 24 hours at WiCS Hackathon 2025, Swappi is a SwiftUI + Firebase p
 ---
 
 ## 🔧 Setup Instructions
+1. 🚀 Clone the Repo
+bash
+Copy
+Edit
+git clone https://github.com/your-username/Swappi.git
+cd Swappi
+2. 📂 Open the Project
+Open Swappi.xcodeproj or Swappi.xcworkspace (if using CocoaPods)
 
-1. Clone the repo  
-   ```bash
-   git clone https://github.com/your-username/Swappi.git
+Recommended: Use Xcode 15+
 
-(i have to add rest ) 
+3. 🔥 Add Firebase Configuration
+Go to Firebase Console
 
+Create an iOS project (if not already created)
+
+Download GoogleService-Info.plist
+
+Drag and drop it into your Xcode project (in the main target)
+
+4. 📦 Install Firebase SDK (via Swift Package Manager)
+In Xcode:
+File > Add Packages...
+Paste this URL:
+
+arduino
+Copy
+Edit
+https://github.com/firebase/firebase-ios-sdk
+Add these packages:
+
+✅ FirebaseAuth
+
+✅ FirebaseFirestore
+
+✅ FirebaseStorage
+
+5. ✅ Build & Run
+Select a simulator or your iPhone
+
+Press Cmd + R or click the ▶️ button in Xcode
