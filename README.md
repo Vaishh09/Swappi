@@ -44,7 +44,8 @@ Copy
 Edit
 git clone https://github.com/your-username/Swappi.git
 cd Swappi
-2. 📂 Open the Project
+git checkout dev_nysa
+3. 📂 Open the Project
 Open Swappi.xcodeproj or Swappi.xcworkspace (if using CocoaPods)
 
 Recommended: Use Xcode 15+
