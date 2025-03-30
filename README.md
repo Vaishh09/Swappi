@@ -4,7 +4,7 @@ WiCS Hackathon 2025
 
 Swappi is your new favorite way to meet people *near you* by **exchanging skills, sharing vibes**, and starting real conversations. Whether you want to learn guitar 🎸, teach design 🎨, or just meet someone who’s also craving matcha 🍵 today — **Swappi matches you accordingly.**
 
-Built in under 24 hours at [Your Hackathon Name], Swappi is a SwiftUI + Firebase powered iOS app that makes social skill-sharing effortless and fun.
+Built in under 24 hours at WiCS Hackathon 2025, Swappi is a SwiftUI + Firebase powered iOS app that makes social skill-sharing effortless and fun.
 
 ---
 
