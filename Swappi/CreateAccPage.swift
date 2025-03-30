@@ -6,6 +6,10 @@
 //
 
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
+import SwiftUI
+
 
 struct CreateAccPage: View {
     @Environment(\.presentationMode) var presentationMode
@@ -17,7 +21,10 @@ struct CreateAccPage: View {
     @State private var phoneNumber = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    
+    @StateObject private var profileVM = ProfileViewModel()
+    @State private var isUploading = false
+    @State private var uploadError: String? = nil
+
     @State private var isPasswordVisible = false
     @State private var isConfirmPasswordVisible = false
     

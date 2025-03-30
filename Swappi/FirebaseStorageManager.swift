@@ -9,6 +9,8 @@ import FirebaseStorage
 import UIKit
 
 class FirebaseStorageManager {
+    
+    // Upload one image
     static func uploadImage(_ image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         let storageRef = Storage.storage().reference()
         let imageData = image.jpegData(compressionQuality: 0.8)
@@ -35,9 +37,8 @@ class FirebaseStorageManager {
             }
         }
     }
-}
 
-extension FirebaseStorageManager {
+    // Upload multiple images
     static func uploadMultipleImages(_ images: [UIImage], completion: @escaping ([String]) -> Void) {
         var uploadedURLs: [String] = []
         let dispatchGroup = DispatchGroup()
@@ -49,7 +50,7 @@ extension FirebaseStorageManager {
                 case .success(let url):
                     uploadedURLs.append(url)
                 case .failure(let error):
-                    print("Upload failed: \(error.localizedDescription)")
+                    print("Image upload failed: \(error.localizedDescription)")
                 }
                 dispatchGroup.leave()
             }
@@ -59,7 +60,25 @@ extension FirebaseStorageManager {
             completion(uploadedURLs)
         }
     }
+
+    // Upload intro video or audio file
+    static func uploadIntroMedia(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
+        let storageRef = Storage.storage().reference()
+        let fileName = UUID().uuidString + ".mov" // or .m4a
+        let mediaRef = storageRef.child("intro_media/\(fileName)")
+
+        mediaRef.putFile(from: fileURL, metadata: nil) { metadata, error in
+            if let error = error {
+                completion(.failure(error))
+            } else {
+                mediaRef.downloadURL { url, error in
+                    if let error = error {
+                        completion(.failure(error))
+                    } else if let downloadURL = url {
+                        completion(.success(downloadURL.absoluteString))
+                    }
+                }
+            }
+        }
+    }
 }
-
-
-
